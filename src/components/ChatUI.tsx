@@ -40,6 +40,7 @@ function getDisplayMode(m: Message): string | null {
 type Props = {
   conversationId: number | null
   onConversationCreated?: (id: number) => void
+  onQuizGenerated?: () => void
 }
 
 const MODES: { value: ChatMode; label: string }[] = [
@@ -48,7 +49,11 @@ const MODES: { value: ChatMode; label: string }[] = [
   { value: 'quiz', label: 'Quiz' },
 ]
 
-export function ChatUI({ conversationId, onConversationCreated }: Props) {
+export function ChatUI({
+  conversationId,
+  onConversationCreated,
+  onQuizGenerated,
+}: Props) {
   const sendMessageFn = useServerFn(sendMessage)
   const getMessagesFn = useServerFn(getMessages)
   const [messages, setMessages] = useState<Message[]>([])
@@ -86,6 +91,7 @@ export function ChatUI({ conversationId, onConversationCreated }: Props) {
       ) {
         onConversationCreated(result.conversationId)
       }
+      if (selectedMode === 'quiz') onQuizGenerated?.()
       setMessages((prev) => [
         ...prev,
         {

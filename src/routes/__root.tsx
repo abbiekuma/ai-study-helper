@@ -1,3 +1,9 @@
+// Buffer polyfill for browser (deps like @google/generative-ai may reference it when server code is tree-shaken)
+import { Buffer } from 'buffer'
+if (typeof globalThis.Buffer === 'undefined') {
+  ;(globalThis as unknown as { Buffer: typeof Buffer }).Buffer = Buffer
+}
+
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
