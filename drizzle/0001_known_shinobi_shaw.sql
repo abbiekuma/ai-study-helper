@@ -1,0 +1,1 @@
+ALTER TABLE "messages" ADD COLUMN "mode" "chat_mode";

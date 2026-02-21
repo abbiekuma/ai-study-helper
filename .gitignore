@@ -1,0 +1,16 @@
+node_modules
+.DS_Store
+.cursor
+.cursorrules
+dist
+dist-ssr
+*.local
+count.txt
+.env
+.env.local
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+todos.json
