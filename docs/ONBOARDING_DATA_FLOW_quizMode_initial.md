@@ -1,5 +1,6 @@
 # Onboarding: 数据流与架构说明
 
+这个是quizMode刚实现好的状态。
 给新人看的文档：用「谁调谁、数据怎么走」的方式说明当前前后端逻辑，并配上 Mermaid 图。所有出现的**函数名**都会在文末列成表，方便你全局搜索。
 
 ---
@@ -214,31 +215,31 @@ sequenceDiagram
 
 方便你全局搜索函数名、知道「这个函数在哪、被谁调」。
 
-| 函数名 | 所在文件 | 说明 |
-|--------|----------|------|
-| `HomePage` | `src/routes/index.tsx` | 首页组件，持有 selectedConversationId、quizQuestions、quizPanelPercent 等状态，渲染 ConversationList / QuizPanel / ChatUI。 |
-| `setSelectedConversationId` | `src/routes/index.tsx` | 由 ConversationList 的 onSelect 和 ChatUI 的 onConversationCreated、onQuizGenerated 间接调用。 |
-| `refetchQuiz` | `src/routes/index.tsx` | 用 getQuizQuestionsFn 拉某会话的题目并 setQuizQuestions；被 onQuizGenerated 和 QuizPanel 的 onRefresh 使用。 |
-| `onQuizGenerated` | `src/routes/index.tsx` | 接收「有 quiz 的 conversationId」，setSelectedConversationId(id) 并 refetchQuiz(id)。 |
-| `ConversationList` | `src/components/ConversationList.tsx` | 左侧会话列表；内部调 getConversations，点击会话调 onSelect(id)。 |
-| `ChatUI` | `src/components/ChatUI.tsx` | 中间/右侧聊天区；内部用 getMessages、sendMessage，发完后可能调 onConversationCreated、onQuizGenerated。 |
-| `handleSend` | `src/components/ChatUI.tsx` | 发送消息：调 sendMessageFn，根据 result 调 onConversationCreated / onQuizGenerated，再 setMessages。 |
-| `QuizPanel` | `src/components/QuizPanel.tsx` | Quiz 题目列表与选项；内部调 submitQuizAnswer，onRefresh 回调父组件拉题。 |
-| `handleSelect` | `src/components/QuizPanel.tsx` | 用户选选项时调用，请求 submitQuizAnswer。 |
-| `getConversations` | `src/lib/chat.server.ts` | Server Fn：拉会话列表。 |
-| `getMessages` | `src/lib/chat.server.ts` | Server Fn：拉某会话的消息列表。 |
-| `getQuizQuestions` | `src/lib/chat.server.ts` | Server Fn：拉某会话的 Quiz 题目。 |
-| `submitQuizAnswer` | `src/lib/chat.server.ts` | Server Fn：提交单选答案，返回对错。 |
-| `sendMessage` | `src/lib/chat.server.ts` | Server Fn：发一条用户消息，后端生成回复并写 DB，返回 conversationId + assistantMessage。 |
-| `getConversationsImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查会话列表。 |
-| `getMessagesImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查某会话的消息。 |
-| `getQuizQuestionsImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查某会话的 quiz_questions。 |
-| `submitQuizAnswerImpl` | `src/lib/chat.impl.server.ts` | 校验答案、更新 quiz_questions 的 userAnswer/status/score，返回 correct + correctAnswer。 |
-| `sendMessageImpl` | `src/lib/chat.impl.server.ts` | 创建或复用会话、写 user 消息、按 mode 调 generateReply 或 generateQuizMcqs、写 assistant 消息、返回 conversationId + assistantMessage。 |
-| `getConversationContextForQuiz` | `src/lib/chat.impl.server.ts` | 取某会话中「非 quiz 模式」的消息，拼成上下文字符串给 generateQuizMcqs。 |
-| `isQuizGenerationRequest` | `src/lib/chat.impl.server.ts` | 判断用户输入是否为「考我」类请求，决定是否生成新题目。 |
-| `generateReply` | `src/lib/gemini.server.ts` | 调用 Gemini 生成普通/深度/Quiz 的文本回复。 |
-| `generateQuizMcqs` | `src/lib/gemini.server.ts` | 根据对话上下文调用 Gemini 生成多道选择题，返回题目列表。 |
+| 函数名                          | 所在文件                              | 说明                                                                                                                                    |
+| ------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `HomePage`                      | `src/routes/index.tsx`                | 首页组件，持有 selectedConversationId、quizQuestions、quizPanelPercent 等状态，渲染 ConversationList / QuizPanel / ChatUI。             |
+| `setSelectedConversationId`     | `src/routes/index.tsx`                | 由 ConversationList 的 onSelect 和 ChatUI 的 onConversationCreated、onQuizGenerated 间接调用。                                          |
+| `refetchQuiz`                   | `src/routes/index.tsx`                | 用 getQuizQuestionsFn 拉某会话的题目并 setQuizQuestions；被 onQuizGenerated 和 QuizPanel 的 onRefresh 使用。                            |
+| `onQuizGenerated`               | `src/routes/index.tsx`                | 接收「有 quiz 的 conversationId」，setSelectedConversationId(id) 并 refetchQuiz(id)。                                                   |
+| `ConversationList`              | `src/components/ConversationList.tsx` | 左侧会话列表；内部调 getConversations，点击会话调 onSelect(id)。                                                                        |
+| `ChatUI`                        | `src/components/ChatUI.tsx`           | 中间/右侧聊天区；内部用 getMessages、sendMessage，发完后可能调 onConversationCreated、onQuizGenerated。                                 |
+| `handleSend`                    | `src/components/ChatUI.tsx`           | 发送消息：调 sendMessageFn，根据 result 调 onConversationCreated / onQuizGenerated，再 setMessages。                                    |
+| `QuizPanel`                     | `src/components/QuizPanel.tsx`        | Quiz 题目列表与选项；内部调 submitQuizAnswer，onRefresh 回调父组件拉题。                                                                |
+| `handleSelect`                  | `src/components/QuizPanel.tsx`        | 用户选选项时调用，请求 submitQuizAnswer。                                                                                               |
+| `getConversations`              | `src/lib/chat.server.ts`              | Server Fn：拉会话列表。                                                                                                                 |
+| `getMessages`                   | `src/lib/chat.server.ts`              | Server Fn：拉某会话的消息列表。                                                                                                         |
+| `getQuizQuestions`              | `src/lib/chat.server.ts`              | Server Fn：拉某会话的 Quiz 题目。                                                                                                       |
+| `submitQuizAnswer`              | `src/lib/chat.server.ts`              | Server Fn：提交单选答案，返回对错。                                                                                                     |
+| `sendMessage`                   | `src/lib/chat.server.ts`              | Server Fn：发一条用户消息，后端生成回复并写 DB，返回 conversationId + assistantMessage。                                                |
+| `getConversationsImpl`          | `src/lib/chat.impl.server.ts`         | 从 DB 查会话列表。                                                                                                                      |
+| `getMessagesImpl`               | `src/lib/chat.impl.server.ts`         | 从 DB 查某会话的消息。                                                                                                                  |
+| `getQuizQuestionsImpl`          | `src/lib/chat.impl.server.ts`         | 从 DB 查某会话的 quiz_questions。                                                                                                       |
+| `submitQuizAnswerImpl`          | `src/lib/chat.impl.server.ts`         | 校验答案、更新 quiz_questions 的 userAnswer/status/score，返回 correct + correctAnswer。                                                |
+| `sendMessageImpl`               | `src/lib/chat.impl.server.ts`         | 创建或复用会话、写 user 消息、按 mode 调 generateReply 或 generateQuizMcqs、写 assistant 消息、返回 conversationId + assistantMessage。 |
+| `getConversationContextForQuiz` | `src/lib/chat.impl.server.ts`         | 取某会话中「非 quiz 模式」的消息，拼成上下文字符串给 generateQuizMcqs。                                                                 |
+| `isQuizGenerationRequest`       | `src/lib/chat.impl.server.ts`         | 判断用户输入是否为「考我」类请求，决定是否生成新题目。                                                                                  |
+| `generateReply`                 | `src/lib/gemini.server.ts`            | 调用 Gemini 生成普通/深度/Quiz 的文本回复。                                                                                             |
+| `generateQuizMcqs`              | `src/lib/gemini.server.ts`            | 根据对话上下文调用 Gemini 生成多道选择题，返回题目列表。                                                                                |
 
 ---
 
