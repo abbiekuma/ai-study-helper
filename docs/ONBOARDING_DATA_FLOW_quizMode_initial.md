@@ -97,6 +97,50 @@ sequenceDiagram
 
 ---
 
+## 2.5 Mermaid：点击「New chat」的数据流
+
+用户没有点左侧已有对话，而是点了 **New chat**。这时不会创建新会话，也不会发任何请求到后端，只是把「当前选中的会话」清空，让中间区域变成「准备发第一条消息」的空状态。
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ConvList as ConversationList
+    participant HomePage as HomePage (index.tsx)
+    participant ChatUI as ChatUI
+
+    User->>ConvList: 点击「New chat」
+    ConvList->>ConvList: handleNewChat()
+    ConvList->>HomePage: onSelect(null)
+
+    HomePage->>HomePage: setSelectedConversationId(null)
+    Note over HomePage: 没有发任何请求到 Server
+
+    HomePage->>HomePage: 重新渲染后 useEffect [selectedConversationId]
+    HomePage->>HomePage: selectedConversationId === null → setQuizQuestions([])，return（不调 getQuizQuestions）
+    HomePage->>HomePage: showQuizPanel = false（不渲染 Quiz 面板）
+
+    HomePage->>ChatUI: 渲染，conversationId={null}
+    ChatUI->>ChatUI: useEffect [conversationId]
+    ChatUI->>ChatUI: conversationId === null → setMessages([])，return（不调 getMessages）
+    ChatUI-->>User: 显示空状态文案：「Choose Beginner / Deep-dive / Quiz, then send a message to start.」
+```
+
+要点：
+
+- **New chat 只改前端状态**：`ConversationList.handleNewChat()` 调的是 `onSelect(null)`，也就是把 `selectedConversationId` 设为 `null`。不会调 `getConversations`、`getMessages`、`getQuizQuestions`，也不会调 `sendMessage`。
+- **HomePage**：`selectedConversationId` 变成 `null` 后，`useEffect` 里会清空 `quizQuestions` 并直接 return，所以不会去拉题目；`showQuizPanel` 为 false，右侧 Quiz 面板不显示。
+- **ChatUI**：拿到的 `conversationId` 是 `null`，`useEffect` 里会 `setMessages([])` 并 return，不会去拉消息。界面只显示「选模式、发消息开始」的提示。
+- **真正的新会话**要等用户**发第一条消息**时才创建：那时 `ChatUI.handleSend` 会调 `sendMessage({ conversationId: undefined, ... })`，后端在 `sendMessageImpl` 里 `insert conversations` 并返回新的 `conversationId`，再通过 `onConversationCreated` / `onQuizGenerated` 把新 id 传回 HomePage（见第 3 节的发送消息数据流）。
+
+和「点已有对话」的对比：
+
+| 操作           | 是否发请求                         | 结果 |
+|----------------|------------------------------------|------|
+| 点左侧某条会话 | 会发 `getQuizQuestions`、`getMessages` | 中间显示该会话消息，若有题则显示 Quiz 面板 |
+| 点 New chat    | **不发任何请求**                   | 中间清空，只显示「发消息开始」的空状态；新会话要等用户发第一条消息时才创建 |
+
+---
+
 ## 3. Mermaid：发送消息数据流（含「考我」与 Quiz 回填）
 
 用户选模式、输入内容、点发送。若是 Quiz 且触发出题，还要让 Quiz 面板出现并显示新题的会话。
