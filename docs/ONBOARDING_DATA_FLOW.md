@@ -1,0 +1,252 @@
+# Onboarding: 数据流与架构说明
+
+给新人看的文档：用「谁调谁、数据怎么走」的方式说明当前前后端逻辑，并配上 Mermaid 图。所有出现的**函数名**都会在文末列成表，方便你全局搜索。
+
+---
+
+## 1. 整体架构（三层）
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  前端 (React)                                                            │
+│  index.tsx (HomePage) → ConversationList / ChatUI / QuizPanel           │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │ useServerFn(...) 调用
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  服务端入口 (RPC)                                                        │
+│  chat.server.ts: getConversations, getMessages, getQuizQuestions,        │
+│                 submitQuizAnswer, sendMessage                            │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │ 动态 import 后调用
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  服务端实现 + 外部服务                                                   │
+│  chat.impl.server.ts: getConversationsImpl, getMessagesImpl, ...         │
+│  gemini.server.ts: generateReply, generateQuizMcqs                      │
+│  db (Drizzle)                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+- **前端**只认识 `chat.server.ts` 里导出的那几个 Server Fn，不直接碰 DB 或 Gemini。
+- **chat.server.ts** 只做「校验入参 + 动态 import impl + 调 impl」，不写业务。
+- **chat.impl.server.ts** 里才是真正的业务：读 DB、调 `generateReply` / `generateQuizMcqs`，再写回 DB。
+
+---
+
+## 2. Mermaid：页面与「选会话」数据流
+
+用户打开首页 → 左侧列出会话 → 点某条会话 → 中间/右侧显示该会话的消息和（若有）Quiz。
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant HomePage as HomePage (index.tsx)
+    participant ConvList as ConversationList
+    participant ChatUI as ChatUI
+    participant Server as chat.server.ts
+    participant Impl as chat.impl.server.ts
+    participant DB as Database
+
+    User->>HomePage: 打开页面
+    HomePage->>ConvList: 渲染, selectedId=null
+
+    ConvList->>ConvList: useEffect
+    ConvList->>Server: getConversations()
+    Server->>Impl: getConversationsImpl()
+    Impl->>DB: select conversations
+    DB-->>Impl: rows
+    Impl-->>Server: conversations[]
+    Server-->>ConvList: conversations[]
+    ConvList->>ConvList: setConversations(...)
+    ConvList-->>User: 显示会话列表
+
+    User->>ConvList: 点击某条会话 (id=5)
+    ConvList->>HomePage: onSelect(5)
+    HomePage->>HomePage: setSelectedConversationId(5)
+
+    HomePage->>HomePage: useEffect [selectedConversationId]
+    HomePage->>Server: getQuizQuestions({ conversationId: 5 })
+    Server->>Impl: getQuizQuestionsImpl({ conversationId: 5 })
+    Impl->>DB: select quiz_questions
+    DB-->>Impl: rows
+    Impl-->>Server: questions[]
+    Server-->>HomePage: questions[]
+    HomePage->>HomePage: setQuizQuestions(...)
+
+    HomePage->>ChatUI: 渲染, conversationId=5
+    ChatUI->>ChatUI: useEffect [conversationId]
+    ChatUI->>Server: getMessages({ conversationId: 5 })
+    Server->>Impl: getMessagesImpl({ conversationId: 5 })
+    Impl->>DB: select messages
+    DB-->>Impl: rows
+    Impl-->>Server: messages[]
+    Server-->>ChatUI: messages[]
+    ChatUI->>ChatUI: setMessages(...)
+    ChatUI-->>User: 显示该会话的消息
+```
+
+要点：
+
+- **ConversationList** 只负责「拉会话列表」和「把选中的 id 交给父组件」：`getConversations` → `getConversationsImpl`。
+- **HomePage** 持有 `selectedConversationId`。一旦变化：
+  - 会调 `getQuizQuestions`（通过 `getQuizQuestionsFn`）拉该会话的题目，并 `setQuizQuestions`。
+  - 把 `conversationId={selectedConversationId}` 传给 **ChatUI**。
+- **ChatUI** 根据 `conversationId` 拉消息：`getMessages` → `getMessagesImpl`，然后 `setMessages` 渲染。
+
+---
+
+## 3. Mermaid：发送消息数据流（含「考我」与 Quiz 回填）
+
+用户选模式、输入内容、点发送。若是 Quiz 且触发出题，还要让 Quiz 面板出现并显示新题的会话。
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ChatUI
+    participant HomePage as HomePage (index.tsx)
+    participant Server as chat.server.ts
+    participant Impl as chat.impl.server.ts
+    participant Gemini as gemini.server.ts
+    participant DB as Database
+
+    User->>ChatUI: 选 Quiz，输入「考我」，点 Send
+    ChatUI->>ChatUI: handleSend(): setInput(''), setLoading(true)
+    ChatUI->>Server: sendMessage({ conversationId?, userMessage, mode: 'quiz' })
+
+    Server->>Impl: sendMessageImpl(data)
+
+    alt 没有 conversationId（新会话）
+        Impl->>DB: insert conversations, 得到 conversationId
+    else 已有 conversationId
+        Impl->>Impl: conversationId = existingId
+    end
+
+    Impl->>DB: insert messages (user)
+    Impl->>Impl: getConversationContextForQuiz(conversationId)
+    Impl->>DB: select messages (非 quiz 的)
+    Impl->>Impl: isQuizGenerationRequest(userMessage) => true
+    Impl->>Gemini: generateQuizMcqs(context)
+    Gemini-->>Impl: mcqs[]
+    Impl->>DB: delete 旧 quiz_questions, insert 新 quiz_questions
+    Impl->>Impl: replyText = "I've added N questions..."
+    Impl->>DB: insert messages (assistant)
+    Impl-->>Server: { conversationId, assistantMessage }
+    Server-->>ChatUI: result
+
+    ChatUI->>ChatUI: 若 result.conversationId 且当前 conversationId 为空
+    ChatUI->>HomePage: onConversationCreated(result.conversationId)
+    HomePage->>HomePage: setSelectedConversationId(newId)
+
+    ChatUI->>HomePage: onQuizGenerated(result.conversationId ?? conversationId)
+    HomePage->>HomePage: onQuizGenerated(id): setSelectedConversationId(id), refetchQuiz(id)
+    HomePage->>Server: getQuizQuestions({ conversationId: id })
+    Server->>Impl: getQuizQuestionsImpl({ conversationId: id })
+    Impl->>DB: select quiz_questions
+    DB-->>Impl: rows
+    Impl-->>Server: questions[]
+    Server-->>HomePage: questions[]
+    HomePage->>HomePage: setQuizQuestions(...)
+
+    ChatUI->>ChatUI: setMessages([...prev, userMsg, assistantMsg])
+    ChatUI->>ChatUI: setLoading(false)
+    ChatUI-->>User: 看到自己的消息 + AI 回复；若 Quiz 则右侧出现题目
+```
+
+要点：
+
+- 发消息**一定**走 `sendMessage` → `sendMessageImpl`。前端等这一句 Promise 结束才更新 UI，所以**没有 SSE/WebSocket**，也没有边收边渲染。
+- 若是**新会话**且服务端返回了 `conversationId`，ChatUI 会调 `onConversationCreated(result.conversationId)`，让 HomePage 把当前选中的会话设为这个新 id。
+- 若是 **Quiz 模式**，ChatUI 会调 `onQuizGenerated(result.conversationId ?? conversationId ?? undefined)`，把「真正带有新 quiz 的会话 id」传给 HomePage。HomePage 用这个 id：`setSelectedConversationId(id)` 并 `refetchQuiz(id)`，这样即使用户是「新会话第一条就发考我」，Quiz 面板也会用正确的 id 拉题并显示。
+
+---
+
+## 4. Mermaid：Quiz 答题数据流
+
+用户在 Quiz 面板里选 A/B/C/D，提交后更新对错与分数。
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant QuizPanel
+    participant Server as chat.server.ts
+    participant Impl as chat.impl.server.ts
+    participant DB as Database
+    participant HomePage as HomePage (index.tsx)
+
+    User->>QuizPanel: 点击选项 (e.g. A)
+    QuizPanel->>QuizPanel: handleSelect(question, 'A')
+    QuizPanel->>QuizPanel: setSubmittingId(question.id)
+    QuizPanel->>Server: submitQuizAnswer({ questionId, userAnswer: 'A' })
+
+    Server->>Impl: submitQuizAnswerImpl({ questionId, userAnswer })
+    Impl->>DB: select correctAnswer where id = questionId
+    Impl->>Impl: correct = (userAnswer === correctAnswer)
+    Impl->>DB: update quiz_questions (userAnswer, status, score)
+    Impl-->>Server: { correct, correctAnswer }
+    Server-->>QuizPanel: { correct, correctAnswer }
+
+    QuizPanel->>QuizPanel: setSubmittingId(null), 本地 state 更新
+    Note over QuizPanel: 题目列表来自父组件 questions prop，未重拉
+    QuizPanel-->>User: 显示对/错和正确答案
+
+    opt 用户点「Refresh」时
+        User->>QuizPanel: onRefresh()
+        QuizPanel->>HomePage: onRefresh 回调
+        HomePage->>Server: getQuizQuestions({ conversationId })
+        Server->>Impl: getQuizQuestionsImpl(...)
+        Impl->>DB: select quiz_questions
+        DB-->>Impl: rows
+        Impl-->>Server: questions[]
+        Server-->>HomePage: questions[]
+        HomePage->>HomePage: setQuizQuestions(...)
+        HomePage-->>QuizPanel: 新 questions prop，重新渲染
+    end
+```
+
+要点：
+
+- Quiz 题目列表是 HomePage 的 state（`quizQuestions`），通过 props 传给 QuizPanel。交卷只调 `submitQuizAnswer` → `submitQuizAnswerImpl` 更新 DB，**不会自动再拉一次题目**；若 UI 上要看到最新 status/score，要么在 submit 返回后由父组件再拉一次，要么像现在这样依赖「父组件传下来的 questions」在别处刷新（例如 onRefresh）。
+
+---
+
+## 5. 函数清单（按文件）
+
+方便你全局搜索函数名、知道「这个函数在哪、被谁调」。
+
+| 函数名 | 所在文件 | 说明 |
+|--------|----------|------|
+| `HomePage` | `src/routes/index.tsx` | 首页组件，持有 selectedConversationId、quizQuestions、quizPanelPercent 等状态，渲染 ConversationList / QuizPanel / ChatUI。 |
+| `setSelectedConversationId` | `src/routes/index.tsx` | 由 ConversationList 的 onSelect 和 ChatUI 的 onConversationCreated、onQuizGenerated 间接调用。 |
+| `refetchQuiz` | `src/routes/index.tsx` | 用 getQuizQuestionsFn 拉某会话的题目并 setQuizQuestions；被 onQuizGenerated 和 QuizPanel 的 onRefresh 使用。 |
+| `onQuizGenerated` | `src/routes/index.tsx` | 接收「有 quiz 的 conversationId」，setSelectedConversationId(id) 并 refetchQuiz(id)。 |
+| `ConversationList` | `src/components/ConversationList.tsx` | 左侧会话列表；内部调 getConversations，点击会话调 onSelect(id)。 |
+| `ChatUI` | `src/components/ChatUI.tsx` | 中间/右侧聊天区；内部用 getMessages、sendMessage，发完后可能调 onConversationCreated、onQuizGenerated。 |
+| `handleSend` | `src/components/ChatUI.tsx` | 发送消息：调 sendMessageFn，根据 result 调 onConversationCreated / onQuizGenerated，再 setMessages。 |
+| `QuizPanel` | `src/components/QuizPanel.tsx` | Quiz 题目列表与选项；内部调 submitQuizAnswer，onRefresh 回调父组件拉题。 |
+| `handleSelect` | `src/components/QuizPanel.tsx` | 用户选选项时调用，请求 submitQuizAnswer。 |
+| `getConversations` | `src/lib/chat.server.ts` | Server Fn：拉会话列表。 |
+| `getMessages` | `src/lib/chat.server.ts` | Server Fn：拉某会话的消息列表。 |
+| `getQuizQuestions` | `src/lib/chat.server.ts` | Server Fn：拉某会话的 Quiz 题目。 |
+| `submitQuizAnswer` | `src/lib/chat.server.ts` | Server Fn：提交单选答案，返回对错。 |
+| `sendMessage` | `src/lib/chat.server.ts` | Server Fn：发一条用户消息，后端生成回复并写 DB，返回 conversationId + assistantMessage。 |
+| `getConversationsImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查会话列表。 |
+| `getMessagesImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查某会话的消息。 |
+| `getQuizQuestionsImpl` | `src/lib/chat.impl.server.ts` | 从 DB 查某会话的 quiz_questions。 |
+| `submitQuizAnswerImpl` | `src/lib/chat.impl.server.ts` | 校验答案、更新 quiz_questions 的 userAnswer/status/score，返回 correct + correctAnswer。 |
+| `sendMessageImpl` | `src/lib/chat.impl.server.ts` | 创建或复用会话、写 user 消息、按 mode 调 generateReply 或 generateQuizMcqs、写 assistant 消息、返回 conversationId + assistantMessage。 |
+| `getConversationContextForQuiz` | `src/lib/chat.impl.server.ts` | 取某会话中「非 quiz 模式」的消息，拼成上下文字符串给 generateQuizMcqs。 |
+| `isQuizGenerationRequest` | `src/lib/chat.impl.server.ts` | 判断用户输入是否为「考我」类请求，决定是否生成新题目。 |
+| `generateReply` | `src/lib/gemini.server.ts` | 调用 Gemini 生成普通/深度/Quiz 的文本回复。 |
+| `generateQuizMcqs` | `src/lib/gemini.server.ts` | 根据对话上下文调用 Gemini 生成多道选择题，返回题目列表。 |
+
+---
+
+## 6. 小结（用人话串一遍）
+
+1. **页面一打开**：左侧列表是 `ConversationList` 调 `getConversations` 拿的；你点哪条，`HomePage` 就把 `selectedConversationId` 设成那个 id，并自动拉该会话的 `getQuizQuestions` 和把 id 交给 `ChatUI` 拉 `getMessages`，所以中间是聊天、右边（若有题）是 Quiz。
+2. **发消息**：只在 `ChatUI.handleSend` 里调一次 `sendMessage`，等后端把整条 AI 回复算完再返回；前端没有流式，也没有先把你发的消息插进列表再等回复，而是**等回复到了再把你发的 + AI 的一起 setMessages**。
+3. **新会话 + 考我**：后端在 `sendMessageImpl` 里可能新建 conversation 并生成题目，返回的 `conversationId` 就是「有题目的那条会话」。ChatUI 通过 `onConversationCreated` 和 `onQuizGenerated(conversationId)` 把这个 id 交给 HomePage，HomePage 用这个 id 选会话并拉题，这样 Quiz 面板才会正确出现。
+4. **做 Quiz**：题目数据在 HomePage 的 `quizQuestions`，通过 props 给 QuizPanel；选答案走 `submitQuizAnswer`，只更新 DB 和本地展示，不再自动全量拉题，除非用户点 Refresh 触发父组件的 `refetchQuiz`。
+
+如果你希望「某一步」再画更细的 Mermaid（例如只画 sendMessageImpl 内部分支），可以指定「从哪到哪」，我可以按步骤再拆一版。
