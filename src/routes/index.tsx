@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConversationList } from '../components/ConversationList'
 import { ChatUI } from '../components/ChatUI'
 import { QuizPanel } from '../components/QuizPanel'
@@ -10,14 +10,20 @@ export const Route = createFileRoute('/')({ component: HomePage })
 
 type QuizQuestion = Awaited<ReturnType<typeof getQuizQuestions>>
 
+const MIN_PANEL_PERCENT = 20
+const MAX_PANEL_PERCENT = 80
+const DEFAULT_QUIZ_PERCENT = 50
+
 function HomePage() {
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
   >(null)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion>([])
+  const [quizPanelPercent, setQuizPanelPercent] = useState(DEFAULT_QUIZ_PERCENT)
+  const [resizing, setResizing] = useState(false)
+  const contentAreaRef = useRef<HTMLDivElement>(null)
   const getQuizQuestionsFn = useServerFn(getQuizQuestions)
 
-  // [4.2] Fetch quiz questions when conversation changes
   useEffect(() => {
     if (selectedConversationId == null) {
       setQuizQuestions([])
@@ -28,9 +34,49 @@ function HomePage() {
       .catch(() => setQuizQuestions([]))
   }, [selectedConversationId, getQuizQuestionsFn])
 
-  // [4.3] Show middle column only when a conversation is selected and it has quiz questions
   const showQuizPanel =
     selectedConversationId != null && quizQuestions.length > 0
+
+  const refetchQuiz = useCallback(
+    (conversationId: number) => {
+      getQuizQuestionsFn({ data: { conversationId } }).then(setQuizQuestions)
+    },
+    [getQuizQuestionsFn],
+  )
+
+  const onQuizGenerated = useCallback(
+    (conversationIdWithQuiz?: number) => {
+      const id = conversationIdWithQuiz ?? selectedConversationId
+      if (id == null) return
+      setSelectedConversationId(id)
+      refetchQuiz(id)
+    },
+    [selectedConversationId, refetchQuiz],
+  )
+
+  useEffect(() => {
+    if (!resizing) return
+    const onMove = (e: MouseEvent) => {
+      const el = contentAreaRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const pct = Math.round((x / rect.width) * 100)
+      const clamped = Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_PERCENT, pct))
+      setQuizPanelPercent(clamped)
+    }
+    const onUp = () => setResizing(false)
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [resizing])
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -38,32 +84,48 @@ function HomePage() {
         selectedId={selectedConversationId}
         onSelect={setSelectedConversationId}
       />
-      {showQuizPanel && (
-        <QuizPanel
-          conversationId={selectedConversationId}
-          questions={quizQuestions}
-          onRefresh={() => {
-            if (selectedConversationId != null) {
-              getQuizQuestionsFn({
-                data: { conversationId: selectedConversationId },
-              }).then(setQuizQuestions)
-            }
-          }}
-        />
-      )}
-      <main className="flex min-h-0 flex-1 flex-col">
-        <ChatUI
-          conversationId={selectedConversationId}
-          onConversationCreated={setSelectedConversationId}
-          onQuizGenerated={() => {
-            if (selectedConversationId != null) {
-              getQuizQuestionsFn({
-                data: { conversationId: selectedConversationId },
-              }).then(setQuizQuestions)
-            }
-          }}
-        />
-      </main>
+      <div
+        ref={contentAreaRef}
+        className="flex min-w-0 flex-1 flex-row"
+      >
+        {showQuizPanel ? (
+          <>
+            <div
+              className="flex min-h-0 shrink-0 flex-col border-l border-gray-200 bg-gray-50 overflow-auto"
+              style={{
+                flex: `0 0 ${quizPanelPercent}%`,
+                minWidth: 200,
+                maxWidth: '80%',
+              }}
+            >
+              <QuizPanel
+                conversationId={selectedConversationId}
+                questions={quizQuestions}
+                onRefresh={() => {
+                  if (selectedConversationId != null) refetchQuiz(selectedConversationId)
+                }}
+              />
+            </div>
+            <div
+              role="separator"
+              aria-valuenow={quizPanelPercent}
+              aria-valuemin={MIN_PANEL_PERCENT}
+              aria-valuemax={MAX_PANEL_PERCENT}
+              tabIndex={0}
+              onMouseDown={() => setResizing(true)}
+              className="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-cyan-400 transition-colors"
+              style={{ minWidth: 4 }}
+            />
+          </>
+        ) : null}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <ChatUI
+            conversationId={selectedConversationId}
+            onConversationCreated={setSelectedConversationId}
+            onQuizGenerated={onQuizGenerated}
+          />
+        </main>
+      </div>
     </div>
   )
 }
