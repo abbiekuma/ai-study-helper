@@ -139,6 +139,17 @@ sequenceDiagram
 | 点左侧某条会话 | 会发 `getQuizQuestions`、`getMessages` | 中间显示该会话消息，若有题则显示 Quiz 面板 |
 | 点 New chat    | **不发任何请求**                   | 中间清空，只显示「发消息开始」的空状态；新会话要等用户发第一条消息时才创建 |
 
+**正确逻辑（逐步，可作自查）**
+
+1. **index.tsx（HomePage）** 负责渲染三个区域（ConversationList、按条件显示的 QuizPanel、ChatUI），并持有状态 `selectedConversationId`。传给 ConversationList 的 `onSelect` 就是 `setSelectedConversationId`（选中哪条会话由父组件 state 决定）。
+2. 用户点击 **「New chat」** → 触发 **ConversationList** 的 **`handleNewChat()`**。ConversationList 的 Props 里 `onSelect: (id: number | null) => void`，即「接收一个 id，不返回值」的回调。
+3. **`handleNewChat`** 调用 **`onSelect(null)`**。因为 `onSelect` 实际是父组件传下来的 **`setSelectedConversationId`**，所以这里执行的是 **`setSelectedConversationId(null)`**，把父组件的 state 更新为 `null`（用 null 调了一次父组件的 setState）。
+4. 父组件重渲染后，**`selectedConversationId`** 变为 `null`，这个 state 通过 props 传下去：`selectedId={selectedConversationId}` 传给 ConversationList，`conversationId={selectedConversationId}` 传给 ChatUI，所以 ChatUI 收到 `conversationId === null`。
+5. **ChatUI** 根据 `conversationId == null` 渲染空状态文案：「Choose Beginner / Deep-dive / Quiz, then send a message to start.」
+6. 用户在输入框输入并点 **Send** → 执行 **ChatUI** 的 **`handleSend`**；内部调用 **`sendMessageFn`**（即 server 的 **`sendMessage`**），参数里 `conversationId: conversationId ?? undefined`，此时为 **undefined**。
+7. 服务端 **`sendMessageImpl`** 里，`existingId` 为 undefined，走 **else**：对 `conversations` 表 **INSERT** 新一行（只填 `mode`），用 `.returning({ id: conversations.id })` 拿到数据库自增的新 id，赋给 `conversationId`，并随 result 返回给前端。
+8. **ChatUI** 收到 result 后调用 **`onConversationCreated(result.conversationId)`**。父组件传的是 **`onConversationCreated={setSelectedConversationId}`**，所以实际执行 **`setSelectedConversationId(新 id)`**，父组件的 **`selectedConversationId`** 被更新为新会话 id，新 id 就这样回传给父组件；之后列表和 Chat 都基于这个新 id 显示。
+
 **补充：`onConversationCreated` 从哪来、新会话 id 是怎么产生的**
 
 - **`onConversationCreated` 是 ChatUI 的 prop**：在 ChatUI 里只声明「我接受一个可选回调 `onConversationCreated?: (id: number) => void`」，具体实现由父组件传入。在 **index.tsx** 里渲染 ChatUI 时传的是 `onConversationCreated={setSelectedConversationId}`，所以「新会话创建后」会执行的是「把当前选中的会话 id 设成这个新 id」。
