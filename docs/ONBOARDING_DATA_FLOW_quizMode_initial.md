@@ -139,6 +139,12 @@ sequenceDiagram
 | 点左侧某条会话 | 会发 `getQuizQuestions`、`getMessages` | 中间显示该会话消息，若有题则显示 Quiz 面板 |
 | 点 New chat    | **不发任何请求**                   | 中间清空，只显示「发消息开始」的空状态；新会话要等用户发第一条消息时才创建 |
 
+**补充：`onConversationCreated` 从哪来、新会话 id 是怎么产生的**
+
+- **`onConversationCreated` 是 ChatUI 的 prop**：在 ChatUI 里只声明「我接受一个可选回调 `onConversationCreated?: (id: number) => void`」，具体实现由父组件传入。在 **index.tsx** 里渲染 ChatUI 时传的是 `onConversationCreated={setSelectedConversationId}`，所以「新会话创建后」会执行的是「把当前选中的会话 id 设成这个新 id」。
+- **新会话的创建不依赖这个回调**：即使用户不传 `onConversationCreated`，只要客户端发 `sendMessage({ conversationId: undefined, ... })`，服务端 **chat.impl.server.ts** 的 `sendMessageImpl` 里看到 `existingId == null`，就会在数据库里 INSERT 新会话并得到新 id。回调只是用来**通知父组件**，让 UI 选中这个新会话。
+- **新 id 是数据库自动生成的**：表 `conversations` 在 **src/db/schema.ts** 里定义了 `id: serial('id').primaryKey()`，即自增主键。在 `sendMessageImpl` 里执行 `db.insert(conversations).values({ mode }).returning({ id: conversations.id })` 时，只插入了 `mode`，没有填 `id`；数据库会为这一行自动生成下一个 id（如 1, 2, 3…）。`.returning({ id: conversations.id })` 表示插入后把这一行的 `id` 列返回，所以 `row.id` 就是刚生成的新会话 id，赋给 `conversationId` 后用于写消息、并返回给前端。
+
 ---
 
 ## 3. Mermaid：发送消息数据流（含「考我」与 Quiz 回填）
