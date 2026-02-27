@@ -44,6 +44,11 @@ function HomePage() {
     [getQuizQuestionsFn],
   )
 
+  /**
+   * 先看左边：conversationIdWithQuiz 有值吗？（只要它不是 null 或 undefined）
+   * 如果有：就把它的值给 id，右边的 selectedConversationId 直接被忽略。
+   * 如果左边没值（是 null 或 undefined）：那就别无选择，只能把右边的 selectedConversationId 给 id。
+   */
   const onQuizGenerated = useCallback(
     (conversationIdWithQuiz?: number) => {
       const id = conversationIdWithQuiz ?? selectedConversationId
@@ -62,7 +67,10 @@ function HomePage() {
       const rect = el.getBoundingClientRect()
       const x = e.clientX - rect.left
       const pct = Math.round((x / rect.width) * 100)
-      const clamped = Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_PERCENT, pct))
+      const clamped = Math.min(
+        MAX_PANEL_PERCENT,
+        Math.max(MIN_PANEL_PERCENT, pct),
+      )
       setQuizPanelPercent(clamped)
     }
     const onUp = () => setResizing(false)
@@ -84,10 +92,7 @@ function HomePage() {
         selectedId={selectedConversationId}
         onSelect={setSelectedConversationId}
       />
-      <div
-        ref={contentAreaRef}
-        className="flex min-w-0 flex-1 flex-row"
-      >
+      <div ref={contentAreaRef} className="flex min-w-0 flex-1 flex-row">
         {showQuizPanel ? (
           <>
             <div
@@ -102,7 +107,8 @@ function HomePage() {
                 conversationId={selectedConversationId}
                 questions={quizQuestions}
                 onRefresh={() => {
-                  if (selectedConversationId != null) refetchQuiz(selectedConversationId)
+                  if (selectedConversationId != null)
+                    refetchQuiz(selectedConversationId)
                 }}
               />
             </div>

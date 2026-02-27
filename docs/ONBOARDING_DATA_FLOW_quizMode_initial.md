@@ -104,8 +104,8 @@ sequenceDiagram
 5. **选会话后会有两条线同时发生**：  
    - **HomePage** 的 **useEffect** 依赖 **selectedConversationId**，会执行 **getQuizQuestionsFn**（即 **getQuizQuestions**）拉该会话的题目，**setQuizQuestions**，若有题则右侧 Quiz 面板显示。  
    - **ChatUI** 收到的 **conversationId** 这个 prop 变了，其 **useEffect** 依赖 **conversationId** 会执行，调用 **getMessagesFn**（即 **getMessages**）→ **getMessagesImpl** 拉该会话的消息，**setMessages**，中间区域渲染出该会话的消息列表。
-6. 用户在 ChatUI 输入并点 **Send** → **handleSend** 里调 **sendMessageFn**（即 **sendMessage**）。服务端 **sendMessageImpl**：先 **INSERT** 用户消息（user role）到 **messages** 表；再按 **mode** 从 DB 拉该会话消息拼成 **history**，调 **generateReply** 得到回复文案（Quiz 模式下若用户没说「考我」类话，走的也是拼 history + **generateReply** 的分支）；然后 **INSERT** assistant 消息到 **messages** 表；最后 **return** **`{ conversationId, assistantMessage }`**。
-7. **ChatUI** 拿到 **result** 后，**setMessages** 把当前列表加上刚发的 user 和 **result.assistantMessage**，**setLoading(false)**。React 重渲染，消息列表区域显示更新后的消息（含用户刚发的一条和 AI 回复的一条）。
+6. 用户在 ChatUI 输入并点 **Send** → **handleSend** 里调 **sendMessageFn**（即 **sendMessage**，不是 getMessages）。服务端 **sendMessageImpl**：先 **INSERT** 用户消息（user role）到 **messages** 表；再按 **mode** 分支。若为 **quiz**，先 **getConversationContextForQuiz** 拿「非 quiz 消息」拼成的 **context**；若 **context.trim() 为空**（会话里还没有学习对话），则只调 **generateReply** 做普通回复、**不出题**；否则若 **isQuizGenerationRequest(userMessage)** 为真则调 **generateQuizMcqs**、删旧 **quiz_questions**、**INSERT** 新题，回复文案为 "I've added N questions..."，否则同样 **generateReply**。非 quiz 模式则拼 history 后 **generateReply**。最后 **INSERT** assistant 消息，**return** `{ conversationId, assistantMessage }`。
+7. **ChatUI** 拿到 **result** 后：若是 Quiz 模式，调用 **onQuizGenerated(result.conversationId ?? conversationId ?? undefined)**。**onQuizGenerated** 是父组件 index 传下来的回调（index 里 52–60 定义）；父组件在该回调里 **setSelectedConversationId(id)** 并 **refetchQuiz(id)**。**refetchQuiz**（index 里 40–45 定义）内部调 **getQuizQuestionsFn** 拉该会话题目并 **setQuizQuestions**，父组件 state **quizQuestions** 更新后，**QuizPanel** 通过 **questions** prop 收到新数据，从而更新 quiz UI。最后 **setMessages** 把当前列表加上刚发的 user 和 **result.assistantMessage**，**setLoading(false)**，聊天区域显示更新后的消息。
 
 ---
 
@@ -229,17 +229,18 @@ sequenceDiagram
 
 要点：
 
-- 发消息**一定**走 `sendMessage` → `sendMessageImpl`。前端等这一句 Promise 结束才更新 UI，所以**没有 SSE/WebSocket**，也没有边收边渲染。
+- 发消息**一定**走 **sendMessage**（chat.server.ts）→ **sendMessageImpl**，不是 getMessages；getMessages 是 conversationId 变化时用来拉消息列表的。前端等 sendMessage 的 Promise 结束才更新 UI，所以**没有 SSE/WebSocket**，也没有边收边渲染。
+- Quiz 模式下，**getConversationContextForQuiz** 返回的 **context**（会话里非 quiz 消息拼成的字符串）若 **trim 为空**，表示会话里还没有学习对话，则只调 **generateReply** 做普通回复、**不出题**；只有 context 有内容且用户输入为「考我」类（**isQuizGenerationRequest** 为真）时才走 **generateQuizMcqs** 并写 **quiz_questions**。
 - 若是**新会话**且服务端返回了 `conversationId`，ChatUI 会调 `onConversationCreated(result.conversationId)`，让 HomePage 把当前选中的会话设为这个新 id。
-- 若是 **Quiz 模式**，ChatUI 会调 `onQuizGenerated(result.conversationId ?? conversationId ?? undefined)`，把「真正带有新 quiz 的会话 id」传给 HomePage。HomePage 用这个 id：`setSelectedConversationId(id)` 并 `refetchQuiz(id)`，这样即使用户是「新会话第一条就发考我」，Quiz 面板也会用正确的 id 拉题并显示。
+- 若是 **Quiz 模式**，ChatUI 会调 **`onQuizGenerated(result.conversationId ?? conversationId ?? undefined)`**，把「真正带有新 quiz 的会话 id」传给 HomePage。**onQuizGenerated** 是父组件 index 定义并传下来的回调；父组件在该回调里 **setSelectedConversationId(id)** 并 **refetchQuiz(id)**，**refetchQuiz** 再调 **getQuizQuestionsFn** 拉题并 **setQuizQuestions**，QuizPanel 通过 **questions** prop 收到新数据后更新 UI（ChatUI 不直接通知 QuizPanel，而是父组件 state 更新 → props 下传）。
 
 **正确逻辑（逐步，可作自查）**
 
 1. 用户在 **ChatUI** 里选模式（如 Quiz）、输入内容、点 **Send** → 触发 **`handleSend`**。`handleSend` 清空输入、设 `loading` 为 true，然后调用 **`sendMessageFn`**（即 server 的 **`sendMessage`**），传入 `conversationId`（当前选中的，可能为 null）、`userMessage`、`mode`。
 2. 服务端 **`sendMessage`** 调 **`sendMessageImpl`**。若传入的 `conversationId`（impl 里叫 `existingId`）有值，则沿用；否则 **INSERT** `conversations` 表拿到新 id。接着 **INSERT** 一条 user 的 **messages**。
-3. **`sendMessageImpl`** 按 `mode` 分支：若非 quiz，从 DB 拉该会话的 messages 拼成 history，调 **`generateReply`** 得到回复文案；若为 quiz，先调 **`getConversationContextForQuiz`** 拿「非 quiz 消息」的上下文，再根据 **`isQuizGenerationRequest(userMessage)`** 判断是否出题：若为「考我」类，调 **`generateQuizMcqs`** 得到题目，删旧 **quiz_questions**、**INSERT** 新题目，回复文案固定为「I've added N questions...」；否则同样用 **`generateReply`** 生成回复。最后 **INSERT** 一条 assistant 的 **messages**，并 return **`{ conversationId, assistantMessage }`**。
-4. **ChatUI** 拿到 result 后：若 `result.conversationId` 存在且当前 `conversationId` 为空（新会话），调用 **`onConversationCreated(result.conversationId)`**（即父组件的 **`setSelectedConversationId`**），让父组件把选中会话设为新 id。若当前为 **Quiz 模式**，调用 **`onQuizGenerated(result.conversationId ?? conversationId ?? undefined)`**，把「有题目的会话 id」传给父组件。
-5. 父组件 **HomePage** 的 **`onQuizGenerated`** 收到 id 后：**`setSelectedConversationId(id)`**（保证选中这条会话），并 **`refetchQuiz(id)`**。`refetchQuiz` 内部调 **`getQuizQuestionsFn`**（即 **`getQuizQuestions`**）拉该会话的题目，再 **`setQuizQuestions`**，于是 `showQuizPanel` 变为 true，Quiz 面板显示。
+3. **`sendMessageImpl`** 按 `mode` 分支：若非 quiz，从 DB 拉该会话的 messages 拼成 history，调 **`generateReply`** 得到回复文案。若为 **quiz**，先调 **`getConversationContextForQuiz`** 拿「非 quiz 消息」拼成的 **context**；若 **context.trim() 为空**（会话里还没有学习对话），则只调 **`generateReply`** 做普通回复、**不出题**；否则若 **`isQuizGenerationRequest(userMessage)`** 为真（用户输入了「考我」类关键词），调 **`generateQuizMcqs`** 得到题目，删旧 **quiz_questions**、**INSERT** 新题目，回复文案固定为「I've added N questions...」；否则同样用 **`generateReply`** 生成回复。最后 **INSERT** 一条 assistant 的 **messages**，并 return **`{ conversationId, assistantMessage }`**。
+4. **ChatUI** 拿到 result 后：若 `result.conversationId` 存在且当前 `conversationId` 为空（新会话），调用 **`onConversationCreated(result.conversationId)`**（即父组件的 **`setSelectedConversationId`**），让父组件把选中会话设为新 id。若当前为 **Quiz 模式**，调用 **`onQuizGenerated(result.conversationId ?? conversationId ?? undefined)`**，把「有题目的会话 id」传给父组件。注意：发消息走的是 **sendMessage**（chat.server.ts），不是 getMessages；getMessages 是 ChatUI 在 conversationId 变化时用来拉消息列表的。
+5. 父组件 **HomePage** 的 **`onQuizGenerated`**（index 里定义，传给 ChatUI 的 callback）收到 id 后：**`setSelectedConversationId(id)`**（保证选中这条会话），并 **`refetchQuiz(id)`**。**refetchQuiz**（index 里 40–45 定义）内部调 **`getQuizQuestionsFn`**（即 **`getQuizQuestions`**）拉该会话的题目，再 **`setQuizQuestions`**，父组件 state **quizQuestions** 更新；**QuizPanel** 通过 **questions** prop 收到新数据，从而 re-render 更新 quiz UI。ChatUI 并没有直接「通知」QuizPanel，而是通过「父组件 state 更新 → props 下发给 QuizPanel」这条链更新。
 6. **ChatUI** 的 **`handleSend`** 里最后 **`setMessages`**，把当前列表加上刚发的 user 消息和 result 里的 assistant 消息，并 **setLoading(false)**。用户看到自己的消息和 AI 回复；若出了题，右侧 Quiz 面板也已出现并显示题目。
 
 ---
