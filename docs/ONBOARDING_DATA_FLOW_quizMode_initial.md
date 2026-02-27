@@ -253,14 +253,14 @@ sequenceDiagram
 sequenceDiagram
     participant User
     participant QuizPanel
+    participant HomePage as HomePage (index.tsx)
     participant Server as chat.server.ts
     participant Impl as chat.impl.server.ts
     participant DB as Database
-    participant HomePage as HomePage (index.tsx)
 
+    Note over HomePage, DB: 题目从 DB 到 QuizPanel：index 的 getQuizQuestionsFn 拉 quiz_questions → setQuizQuestions → questions prop 传给 QuizPanel → map + parseOptions 填进每一题
     User->>QuizPanel: 点击选项 (e.g. A)
-    QuizPanel->>QuizPanel: handleSelect(question, 'A')
-    QuizPanel->>QuizPanel: setSubmittingId(question.id)
+    QuizPanel->>QuizPanel: handleSelect(question, 'A'), setSubmittingId(question.id)
     QuizPanel->>Server: submitQuizAnswer({ questionId, userAnswer: 'A' })
 
     Server->>Impl: submitQuizAnswerImpl({ questionId, userAnswer })
@@ -268,29 +268,36 @@ sequenceDiagram
     Impl->>Impl: correct = (userAnswer === correctAnswer)
     Impl->>DB: update quiz_questions (userAnswer, status, score)
     Impl-->>Server: { correct, correctAnswer }
-    Server-->>QuizPanel: { correct, correctAnswer }
+    Server-->>QuizPanel: resolve
 
-    QuizPanel->>QuizPanel: setSubmittingId(null), 本地 state 更新
-    Note over QuizPanel: 题目列表来自父组件 questions prop，未重拉
-    QuizPanel-->>User: 显示对/错和正确答案
-
-    opt 用户点「Refresh」时
-        User->>QuizPanel: onRefresh()
-        QuizPanel->>HomePage: onRefresh 回调
-        HomePage->>Server: getQuizQuestions({ conversationId })
-        Server->>Impl: getQuizQuestionsImpl(...)
-        Impl->>DB: select quiz_questions
-        DB-->>Impl: rows
-        Impl-->>Server: questions[]
-        Server-->>HomePage: questions[]
-        HomePage->>HomePage: setQuizQuestions(...)
-        HomePage-->>QuizPanel: 新 questions prop，重新渲染
-    end
+    QuizPanel->>QuizPanel: onRefresh?.()
+    QuizPanel->>HomePage: onRefresh 回调
+    HomePage->>Server: getQuizQuestions({ conversationId })
+    Server->>Impl: getQuizQuestionsImpl(...)
+    Impl->>DB: select quiz_questions
+    DB-->>Impl: rows（含更新后的 userAnswer, status, score）
+    Impl-->>Server: questions[]
+    Server-->>HomePage: questions[]
+    HomePage->>HomePage: setQuizQuestions(...)
+    HomePage-->>QuizPanel: 新 questions prop
+    QuizPanel->>QuizPanel: re-render，用 q.status / q.userAnswer / q.correctAnswer 算 showCorrect、showWrong
+    QuizPanel->>QuizPanel: setSubmittingId(null)
+    QuizPanel-->>User: 显示对/错和正确答案（绿/红）
 ```
 
 要点：
 
-- Quiz 题目列表是 HomePage 的 state（`quizQuestions`），通过 props 传给 QuizPanel。交卷只调 `submitQuizAnswer` → `submitQuizAnswerImpl` 更新 DB，**不会自动再拉一次题目**；若 UI 上要看到最新 status/score，要么在 submit 返回后由父组件再拉一次，要么像现在这样依赖「父组件传下来的 questions」在别处刷新（例如 onRefresh）。
+- **题目从 DB 到 QuizPanel**：QuizPanel 不自己查 DB。父组件 index 的 **getQuizQuestionsFn**（**getQuizQuestions**）→ **getQuizQuestionsImpl** 从 **quiz_questions** 表 SELECT 该会话的题目，index **setQuizQuestions** 后通过 **questions** prop 传给 QuizPanel。QuizPanel 用 **questions.map((q) => ...)** 渲染每一题：**q.title** 作题干，**q.options**（JSON 字符串）经 **parseOptions** 转成 A/B/C/D 选项文案，**q.questionOrder** 作题号。
+- **对错在服务端算**：用户点选项 → **handleSelect** 调 **submitQuizAnswer(questionId, userAnswer)**。**submitQuizAnswerImpl** 用 questionId 从 DB 读 **correctAnswer**，比较 **correct = (userAnswer === correctAnswer)**，再 **UPDATE** 该行的 **userAnswer、status（'correct'/'incorrect'）、score（1/0）**，并 return **{ correct, correctAnswer }**。
+- **对错如何显示**：submit 成功后 **handleSelect** 里调 **onRefresh?.()**。onRefresh 是 index 传下来的，内部对当前会话调 **refetchQuiz**（即 **getQuizQuestionsFn** 再拉一次题目）。index **setQuizQuestions(新数据)**，QuizPanel 收到新的 **questions** prop（已含 DB 里刚写的 userAnswer、status、score），re-render 时用 **q.status、q.userAnswer、q.correctAnswer** 算 **showCorrect** / **showWrong**，给对应选项按钮加绿/红样式并显示 "✓ Correct" 或 "✗ Wrong (correct: X)"。
+- 若用户**不点选项、只点「Refresh」**，同样会走 onRefresh → refetchQuiz → setQuizQuestions → QuizPanel 用新 questions 渲染。
+
+**正确逻辑（逐步，可作自查）**
+
+1. **题目进 UI**：index 在 **selectedConversationId** 变化时调 **getQuizQuestionsFn**（**getQuizQuestions**）→ **getQuizQuestionsImpl** 从 **quiz_questions** 表按 conversationId 拉出 rows；index **setQuizQuestions(rows)**，再通过 **questions={quizQuestions}** 传给 **QuizPanel**。QuizPanel 用 **questions.map** 遍历每道题，**q.title** 渲染题干，**parseOptions(q.options)** 把 JSON 转成选项对象后按 A/B/C/D 渲染按钮，**q.questionOrder** 作题号；**q.status、q.userAnswer、q.correctAnswer** 用来算是否已答、对错样式。
+2. **用户点选项**：**handleSelect(q, key)** 被调用（key 为 'A'/'B'/'C'/'D'）。若该题 **q.status** 已是 'correct'/'incorrect' 或正在提交则 return；否则 **setSubmittingId(q.id)**，调 **submitAnswerFn({ questionId: q.id, userAnswer: key })**（即 **submitQuizAnswer**）。
+3. **服务端评估**：**submitQuizAnswerImpl** 根据 questionId 从 **quiz_questions** 取 **correctAnswer**，**correct = (userAnswer === correctAnswer)**，再 **UPDATE** 该行 **userAnswer、status、score**，return **{ correct, correctAnswer }**。
+4. **前端更新对错展示**：**submitAnswerFn**  resolve 后 **onRefresh?.()** 被调用。index 的 onRefresh 实现里调 **refetchQuiz(selectedConversationId)**，即 **getQuizQuestionsFn** 再拉一次该会话题目；index **setQuizQuestions** 更新 state，**QuizPanel** 收到新的 **questions** prop，re-render。每道题用 **answered = q.status !== 'pending'**、**showCorrect = answered && (q.correctAnswer === key)**、**showWrong = answered && (q.userAnswer === key) && (q.correctAnswer !== key)** 决定绿/红和文案，用户看到对错与正确答案。
 
 ---
 
