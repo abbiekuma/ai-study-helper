@@ -1,7 +1,7 @@
 // Server-only implementation: db, gemini. Imported only inside server function handlers.
 import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm'
 import { db } from '../db/index'
-import { conversations, messages, quizQuestions } from '../db/schema'
+import { conversations, messages, quizQuestions, quizzes } from '../db/schema'
 import type { ChatMode, HistoryMessage } from './gemini.server'
 import { generateReply, generateQuizMcqs } from './gemini.server'
 
@@ -69,11 +69,25 @@ export async function getMessagesImpl(data: { conversationId: number }) {
   return rows
 }
 
-export async function getQuizQuestionsImpl(data: { conversationId: number }) {
+export async function getQuizzesImpl(data: { conversationId: number }) {
+  const rows = await db
+    .select({
+      id: quizzes.id,
+      conversationId: quizzes.conversationId,
+      createdAt: quizzes.createdAt,
+      isSaved: quizzes.isSaved,
+    })
+    .from(quizzes)
+    .where(eq(quizzes.conversationId, data.conversationId))
+    .orderBy(desc(quizzes.createdAt))
+  return rows
+}
+
+export async function getQuizQuestionsImpl(data: { quizId: number }) {
   const rows = await db
     .select({
       id: quizQuestions.id,
-      conversationId: quizQuestions.conversationId,
+      quizId: quizQuestions.quizId,
       title: quizQuestions.title,
       options: quizQuestions.options,
       correctAnswer: quizQuestions.correctAnswer,
@@ -84,7 +98,7 @@ export async function getQuizQuestionsImpl(data: { conversationId: number }) {
       createdAt: quizQuestions.createdAt,
     })
     .from(quizQuestions)
-    .where(eq(quizQuestions.conversationId, data.conversationId))
+    .where(eq(quizQuestions.quizId, data.quizId))
     .orderBy(asc(quizQuestions.questionOrder))
   return rows
 }
@@ -151,12 +165,18 @@ export async function sendMessageImpl(data: {
     } else if (isQuizGenerationRequest(userMessage)) {
       try {
         const mcqs = await generateQuizMcqs(context)
-        await db
-          .delete(quizQuestions)
-          .where(eq(quizQuestions.conversationId, conversationId))
+        const [quizRow] = await db
+          .insert(quizzes)
+          .values({
+            conversationId,
+            isSaved: false,
+          })
+          .returning({ id: quizzes.id })
+        if (!quizRow) throw new Error('Failed to create quiz row')
+        const quizId = quizRow.id
         for (let i = 0; i < mcqs.length; i++) {
           await db.insert(quizQuestions).values({
-            conversationId,
+            quizId,
             title: mcqs[i].question,
             options: JSON.stringify(mcqs[i].options),
             correctAnswer: mcqs[i].correctAnswer,
@@ -165,6 +185,22 @@ export async function sendMessageImpl(data: {
           })
         }
         replyText = `I've added ${mcqs.length} questions. Answer them in the quiz panel on the right.`
+        await db.insert(messages).values({
+          conversationId,
+          role: 'assistant',
+          content: replyText,
+          mode,
+          modelUsed: `${BEGINNER_MODEL_NAME} (${mode})`,
+        })
+        return {
+          conversationId,
+          assistantMessage: {
+            role: 'assistant' as const,
+            content: replyText,
+            mode,
+          },
+          quizId,
+        }
       } catch (e) {
         const errMessage = e instanceof Error ? e.message : String(e)
         console.error('Quiz generation failed:', e)
@@ -211,4 +247,15 @@ export async function sendMessageImpl(data: {
       mode,
     },
   }
+}
+
+export async function updateQuizSavedImpl(data: {
+  quizId: number
+  isSaved: boolean
+}) {
+  await db
+    .update(quizzes)
+    .set({ isSaved: data.isSaved })
+    .where(eq(quizzes.id, data.quizId))
+  return { success: true }
 }

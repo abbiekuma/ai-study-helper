@@ -16,10 +16,17 @@ export const getMessages = createServerFn({ method: 'GET' })
   })
 
 export const getQuizQuestions = createServerFn({ method: 'GET' })
-  .inputValidator((data: { conversationId: number }) => data)
+  .inputValidator((data: { quizId: number }) => data)
   .handler(async ({ data }) => {
     const m = await import('./chat.impl.server')
     return m.getQuizQuestionsImpl(data)
+  })
+
+export const getQuizzes = createServerFn({ method: 'GET' })
+  .inputValidator((data: { conversationId: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await import('./chat.impl.server')
+    return m.getQuizzesImpl(data)
   })
 
 export const submitQuizAnswer = createServerFn({ method: 'POST' })
@@ -30,6 +37,16 @@ export const submitQuizAnswer = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const m = await import('./chat.impl.server')
     return m.submitQuizAnswerImpl(data)
+  })
+
+export const updateQuizSaved = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: { quizId: number; isSaved: boolean }) =>
+      data as { quizId: number; isSaved: boolean },
+  )
+  .handler(async ({ data }) => {
+    const m = await import('./chat.impl.server')
+    return m.updateQuizSavedImpl(data)
   })
 
 export const sendMessage = createServerFn({ method: 'POST' })

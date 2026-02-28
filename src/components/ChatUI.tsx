@@ -40,8 +40,8 @@ function getDisplayMode(m: Message): string | null {
 type Props = {
   conversationId: number | null
   onConversationCreated?: (id: number) => void
-  /** Called after a quiz was generated; pass the conversation id that has the new quiz (for refetch / new-conversation case). */
-  onQuizGenerated?: (conversationIdWithQuiz?: number) => void
+  /** Called after a quiz was generated; pass conversation id and new quiz id for refetch / new-conversation case. */
+  onQuizGenerated?: (conversationIdWithQuiz?: number, quizId?: number) => void
 }
 
 const MODES: { value: ChatMode; label: string }[] = [
@@ -93,7 +93,10 @@ export function ChatUI({
         onConversationCreated(result.conversationId)
       }
       if (selectedMode === 'quiz') {
-        onQuizGenerated?.(result.conversationId ?? conversationId ?? undefined)
+        onQuizGenerated?.(
+          result.conversationId ?? conversationId ?? undefined,
+          result.quizId,
+        )
       }
       setMessages((prev) => [
         ...prev,

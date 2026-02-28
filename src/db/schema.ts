@@ -1,5 +1,6 @@
 // src/db/schema.ts
 import {
+  boolean,
   integer,
   pgEnum,
   pgTable,
@@ -38,12 +39,22 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// Quiz: one conversation has many questions (MCQ); generated when user asks to be quizzed
-export const quizQuestions = pgTable('quiz_questions', {
+// One row per "quiz" (one "考我" generation). One conversation has many quizzes.
+export const quizzes = pgTable('quizzes', {
   id: serial('id').primaryKey(),
   conversationId: integer('conversation_id')
     .notNull()
     .references(() => conversations.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  isSaved: boolean('is_saved').notNull().default(false),
+})
+
+// One row per question (MCQ). Each question belongs to one quiz.
+export const quizQuestions = pgTable('quiz_questions', {
+  id: serial('id').primaryKey(),
+  quizId: integer('quiz_id')
+    .notNull()
+    .references(() => quizzes.id, { onDelete: 'cascade' }),
   title: text('title').notNull(), // 题干
   options: text('options').notNull(), // JSON: {"A":"...","B":"...","C":"...","D":"..."}
   correctAnswer: text('correct_answer').notNull(), // "A" | "B" | "C" | "D"
@@ -54,10 +65,10 @@ export const quizQuestions = pgTable('quiz_questions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// Relations: one conversation has many messages, many quiz_questions
+// Relations
 export const conversationsRelations = relations(conversations, ({ many }) => ({
   messages: many(messages),
-  quizQuestions: many(quizQuestions),
+  quizzes: many(quizzes),
 }))
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -67,9 +78,17 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }))
 
-export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
+export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
   conversation: one(conversations, {
-    fields: [quizQuestions.conversationId],
+    fields: [quizzes.conversationId],
     references: [conversations.id],
+  }),
+  questions: many(quizQuestions),
+}))
+
+export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
+  quiz: one(quizzes, {
+    fields: [quizQuestions.quizId],
+    references: [quizzes.id],
   }),
 }))

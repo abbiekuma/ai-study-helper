@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConversationList } from '../components/ConversationList'
 import { ChatUI } from '../components/ChatUI'
 import { QuizPanel } from '../components/QuizPanel'
-import { getQuizQuestions } from '../lib/chat.server'
+import { getQuizQuestions, getQuizzes, updateQuizSaved } from '../lib/chat.server'
 import { useServerFn } from '@tanstack/react-start'
 
 export const Route = createFileRoute('/')({ component: HomePage })
 
 type QuizQuestion = Awaited<ReturnType<typeof getQuizQuestions>>
+type Quiz = Awaited<ReturnType<typeof getQuizzes>>[number]
 
 const MIN_PANEL_PERCENT = 20
 const MAX_PANEL_PERCENT = 80
@@ -18,45 +19,78 @@ function HomePage() {
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
   >(null)
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion>([])
   const [quizPanelPercent, setQuizPanelPercent] = useState(DEFAULT_QUIZ_PERCENT)
   const [resizing, setResizing] = useState(false)
   const contentAreaRef = useRef<HTMLDivElement>(null)
+  const getQuizzesFn = useServerFn(getQuizzes)
   const getQuizQuestionsFn = useServerFn(getQuizQuestions)
+  const updateQuizSavedFn = useServerFn(updateQuizSaved)
 
+  // When conversation changes: fetch quizzes and pick first as selected
   useEffect(() => {
     if (selectedConversationId == null) {
+      setQuizzes([])
+      setSelectedQuizId(null)
       setQuizQuestions([])
       return
     }
-    getQuizQuestionsFn({ data: { conversationId: selectedConversationId } })
+    getQuizzesFn({ data: { conversationId: selectedConversationId } })
+      .then((list) => {
+        setQuizzes(list)
+        setSelectedQuizId(list[0]?.id ?? null)
+      })
+      .catch(() => {
+        setQuizzes([])
+        setSelectedQuizId(null)
+      })
+  }, [selectedConversationId, getQuizzesFn])
+
+  // When selected quiz changes: fetch questions for that quiz
+  useEffect(() => {
+    if (selectedQuizId == null) {
+      setQuizQuestions([])
+      return
+    }
+    getQuizQuestionsFn({ data: { quizId: selectedQuizId } })
       .then(setQuizQuestions)
       .catch(() => setQuizQuestions([]))
-  }, [selectedConversationId, getQuizQuestionsFn])
+  }, [selectedQuizId, getQuizQuestionsFn])
 
   const showQuizPanel =
-    selectedConversationId != null && quizQuestions.length > 0
+    selectedConversationId != null && selectedQuizId != null
 
-  const refetchQuiz = useCallback(
-    (conversationId: number) => {
-      getQuizQuestionsFn({ data: { conversationId } }).then(setQuizQuestions)
-    },
-    [getQuizQuestionsFn],
-  )
+  const refetchQuiz = useCallback(() => {
+    if (selectedQuizId == null) return
+    getQuizQuestionsFn({ data: { quizId: selectedQuizId } }).then(setQuizQuestions)
+  }, [selectedQuizId, getQuizQuestionsFn])
+
+  const refetchQuizzes = useCallback(() => {
+    if (selectedConversationId == null) return
+    getQuizzesFn({ data: { conversationId: selectedConversationId } }).then(
+      setQuizzes,
+    )
+  }, [selectedConversationId, getQuizzesFn])
 
   /**
-   * 先看左边：conversationIdWithQuiz 有值吗？（只要它不是 null 或 undefined）
-   * 如果有：就把它的值给 id，右边的 selectedConversationId 直接被忽略。
-   * 如果左边没值（是 null 或 undefined）：那就别无选择，只能把右边的 selectedConversationId 给 id。
+   * When a new quiz is generated: optionally set conversation (e.g. new chat),
+   * set selected quiz to the new quizId, then refetch quizzes and questions.
    */
   const onQuizGenerated = useCallback(
-    (conversationIdWithQuiz?: number) => {
-      const id = conversationIdWithQuiz ?? selectedConversationId
-      if (id == null) return
-      setSelectedConversationId(id)
-      refetchQuiz(id)
+    (conversationIdWithQuiz?: number, quizId?: number) => {
+      const cid = conversationIdWithQuiz ?? selectedConversationId
+      if (cid != null) setSelectedConversationId(cid)
+      if (quizId != null) setSelectedQuizId(quizId)
+      if (cid != null) {
+        getQuizzesFn({ data: { conversationId: cid } }).then(setQuizzes)
+      }
+      if (quizId != null) {
+        getQuizQuestionsFn({ data: { quizId } }).then(setQuizQuestions)
+      }
     },
-    [selectedConversationId, refetchQuiz],
+    [selectedConversationId, getQuizzesFn, getQuizQuestionsFn],
   )
 
   useEffect(() => {
@@ -104,12 +138,29 @@ function HomePage() {
               }}
             >
               <QuizPanel
-                conversationId={selectedConversationId}
+                quizId={selectedQuizId}
+                quizzes={quizzes}
+                onSelectQuiz={setSelectedQuizId}
                 questions={quizQuestions}
-                onRefresh={() => {
-                  if (selectedConversationId != null)
-                    refetchQuiz(selectedConversationId)
-                }}
+                onRefresh={refetchQuiz}
+                isSaved={
+                  quizzes.find((q) => q.id === selectedQuizId)?.isSaved ?? false
+                }
+                onToggleSaved={
+                  selectedQuizId != null
+                    ? async () => {
+                        const q = quizzes.find((q) => q.id === selectedQuizId)
+                        if (!q) return
+                        await updateQuizSavedFn({
+                          data: {
+                            quizId: selectedQuizId,
+                            isSaved: !q.isSaved,
+                          },
+                        })
+                        refetchQuizzes()
+                      }
+                    : undefined
+                }
               />
             </div>
             <div
