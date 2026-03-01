@@ -49,6 +49,27 @@ export const updateQuizSaved = createServerFn({ method: 'POST' })
     return q.updateQuizSavedImpl(data)
   })
 
+export const getAllQuizzesGroupedByConversation = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const q = await import('./quiz.service')
+  return q.getAllQuizzesGroupedByConversationImpl()
+})
+
+export const getSavedQuizzes = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const q = await import('./quiz.service')
+    return q.getSavedQuizzesImpl()
+  },
+)
+
+export const getQuizById = createServerFn({ method: 'GET' })
+  .inputValidator((data: { quizId: number }) => data)
+  .handler(async ({ data }) => {
+    const q = await import('./quiz.service')
+    return q.getQuizByIdImpl(data)
+  })
+
 export const sendMessage = createServerFn({ method: 'POST' })
   .inputValidator(
     (data: {

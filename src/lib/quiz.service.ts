@@ -1,7 +1,7 @@
 // Quiz-only service: context, CRUD, and quiz generation. Used by chat.impl.server (sendMessage "考我") and chat.server (quiz server fn handlers).
 import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm'
 import { db } from '../db/index'
-import { messages, quizQuestions, quizzes } from '../db/schema'
+import { conversations, messages, quizQuestions, quizzes } from '../db/schema'
 import { generateQuizMcqs } from './gemini.server'
 
 export function isQuizGenerationRequest(message: string): boolean {
@@ -139,4 +139,122 @@ export async function createQuizFromContext(data: {
   }
   const replyText = `I've added ${mcqs.length} questions. Answer them in the quiz panel on the right.`
   return { quizId, replyText }
+}
+
+export type QuizGroupItem = {
+  conversationId: number
+  title: string | null
+  mode: string
+  createdAt: Date
+  quizzes: Array<{ id: number; createdAt: Date; isSaved: boolean }>
+}
+
+export async function getAllQuizzesGroupedByConversationImpl(): Promise<
+  QuizGroupItem[]
+> {
+  const rows = await db
+    .select({
+      quizId: quizzes.id,
+      quizCreatedAt: quizzes.createdAt,
+      quizIsSaved: quizzes.isSaved,
+      conversationId: conversations.id,
+      title: conversations.title,
+      mode: conversations.mode,
+      conversationCreatedAt: conversations.createdAt,
+    })
+    .from(quizzes)
+    .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .orderBy(
+      desc(conversations.createdAt),
+      desc(quizzes.createdAt),
+    )
+  const byConv = new Map<
+    number,
+    {
+      conversationId: number
+      title: string | null
+      mode: string
+      createdAt: Date
+      quizzes: Array<{ id: number; createdAt: Date; isSaved: boolean }>
+    }
+  >()
+  for (const r of rows) {
+    let group = byConv.get(r.conversationId)
+    if (!group) {
+      group = {
+        conversationId: r.conversationId,
+        title: r.title,
+        mode: r.mode,
+        createdAt: r.conversationCreatedAt,
+        quizzes: [],
+      }
+      byConv.set(r.conversationId, group)
+    }
+    group.quizzes.push({
+      id: r.quizId,
+      createdAt: r.quizCreatedAt,
+      isSaved: r.quizIsSaved,
+    })
+  }
+  return Array.from(byConv.values())
+}
+
+export type SavedQuizItem = {
+  id: number
+  conversationId: number
+  createdAt: Date
+  isSaved: boolean
+  conversationTitle: string | null
+}
+
+export async function getSavedQuizzesImpl(): Promise<SavedQuizItem[]> {
+  const rows = await db
+    .select({
+      id: quizzes.id,
+      conversationId: quizzes.conversationId,
+      createdAt: quizzes.createdAt,
+      isSaved: quizzes.isSaved,
+      conversationTitle: conversations.title,
+    })
+    .from(quizzes)
+    .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .where(eq(quizzes.isSaved, true))
+    .orderBy(desc(quizzes.createdAt))
+  return rows.map((r) => ({
+    id: r.id,
+    conversationId: r.conversationId,
+    createdAt: r.createdAt,
+    isSaved: r.isSaved,
+    conversationTitle: r.conversationTitle,
+  }))
+}
+
+export async function getQuizByIdImpl(data: {
+  quizId: number
+}): Promise<{
+  id: number
+  conversationId: number
+  createdAt: Date
+  isSaved: boolean
+  conversationTitle: string | null
+} | null> {
+  const [row] = await db
+    .select({
+      id: quizzes.id,
+      conversationId: quizzes.conversationId,
+      createdAt: quizzes.createdAt,
+      isSaved: quizzes.isSaved,
+      conversationTitle: conversations.title,
+    })
+    .from(quizzes)
+    .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .where(eq(quizzes.id, data.quizId))
+  if (!row) return null
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    createdAt: row.createdAt,
+    isSaved: row.isSaved,
+    conversationTitle: row.conversationTitle,
+  }
 }
