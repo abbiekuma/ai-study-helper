@@ -18,15 +18,15 @@ export const getMessages = createServerFn({ method: 'GET' })
 export const getQuizQuestions = createServerFn({ method: 'GET' })
   .inputValidator((data: { quizId: number }) => data)
   .handler(async ({ data }) => {
-    const m = await import('./chat.impl.server')
-    return m.getQuizQuestionsImpl(data)
+    const q = await import('./quiz.service')
+    return q.getQuizQuestionsImpl(data)
   })
 
 export const getQuizzes = createServerFn({ method: 'GET' })
   .inputValidator((data: { conversationId: number }) => data)
   .handler(async ({ data }) => {
-    const m = await import('./chat.impl.server')
-    return m.getQuizzesImpl(data)
+    const q = await import('./quiz.service')
+    return q.getQuizzesImpl(data)
   })
 
 export const submitQuizAnswer = createServerFn({ method: 'POST' })
@@ -35,8 +35,8 @@ export const submitQuizAnswer = createServerFn({ method: 'POST' })
       data as { questionId: number; userAnswer: string },
   )
   .handler(async ({ data }) => {
-    const m = await import('./chat.impl.server')
-    return m.submitQuizAnswerImpl(data)
+    const q = await import('./quiz.service')
+    return q.submitQuizAnswerImpl(data)
   })
 
 export const updateQuizSaved = createServerFn({ method: 'POST' })
@@ -45,8 +45,8 @@ export const updateQuizSaved = createServerFn({ method: 'POST' })
       data as { quizId: number; isSaved: boolean },
   )
   .handler(async ({ data }) => {
-    const m = await import('./chat.impl.server')
-    return m.updateQuizSavedImpl(data)
+    const q = await import('./quiz.service')
+    return q.updateQuizSavedImpl(data)
   })
 
 export const sendMessage = createServerFn({ method: 'POST' })
