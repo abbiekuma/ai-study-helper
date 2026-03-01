@@ -66,6 +66,10 @@ function HomePage() {
     setSelectedQuizId(null)
   }, [])
 
+  const handleOpenQuiz = useCallback((quizId: number) => {
+    setSelectedQuizId(quizId)
+  }, [])
+
   const refetchQuiz = useCallback(() => {
     if (selectedQuizId == null) return
     getQuizQuestionsFn({ data: { quizId: selectedQuizId } }).then(setQuizQuestions)
@@ -185,6 +189,9 @@ function HomePage() {
             conversationId={selectedConversationId}
             onConversationCreated={setSelectedConversationId}
             onQuizGenerated={onQuizGenerated}
+            quizzes={quizzes}
+            selectedQuizId={selectedQuizId}
+            onOpenQuiz={handleOpenQuiz}
           />
         </main>
       </div>

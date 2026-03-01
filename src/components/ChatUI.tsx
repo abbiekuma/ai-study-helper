@@ -42,6 +42,12 @@ type Props = {
   onConversationCreated?: (id: number) => void
   /** Called after a quiz was generated; pass conversation id and new quiz id for refetch / new-conversation case. */
   onQuizGenerated?: (conversationIdWithQuiz?: number, quizId?: number) => void
+  /** Quizzes for the current chat; when present and non-empty, show Quiz bar to reopen panel. */
+  quizzes?: Array<{ id: number; createdAt: Date; isSaved: boolean }>
+  /** Currently selected quiz id (for highlighting in bar). */
+  selectedQuizId?: number | null
+  /** Called when user clicks a quiz in the bar to open the quiz panel. */
+  onOpenQuiz?: (quizId: number) => void
 }
 
 const MODES: { value: ChatMode; label: string }[] = [
@@ -54,6 +60,9 @@ export function ChatUI({
   conversationId,
   onConversationCreated,
   onQuizGenerated,
+  quizzes = [],
+  selectedQuizId = null,
+  onOpenQuiz,
 }: Props) {
   const sendMessageFn = useServerFn(sendMessage)
   const getMessagesFn = useServerFn(getMessages)
@@ -124,6 +133,30 @@ export function ChatUI({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {conversationId != null && quizzes.length > 0 && onOpenQuiz != null && (
+        <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
+          <span className="mr-2 text-xs font-medium text-gray-500">
+            Quizzes:
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {quizzes.map((q, i) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => onOpenQuiz(q.id)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedQuizId === q.id
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Quiz {i + 1}
+                {q.isSaved ? ' ★' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {messages.length === 0 && conversationId == null && (
           <p className="text-gray-500">
