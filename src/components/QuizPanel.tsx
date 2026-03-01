@@ -74,7 +74,7 @@ export function QuizPanel({
   }
 
   return (
-    <aside className="flex min-w-0 flex-shrink-0 flex-col border-l border-gray-200 bg-gray-50 md:w-80">
+    <aside className="flex min-w-0 flex-1 flex-col border-l border-gray-200 bg-gray-50 overflow-hidden">
       <div className="border-b border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 flex items-center justify-between gap-2">
         <span>Quiz</span>
         {quizzes.length > 1 && (
