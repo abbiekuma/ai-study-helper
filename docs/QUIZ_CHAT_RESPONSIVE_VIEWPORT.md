@@ -62,13 +62,13 @@ src/components/QuizPanel.tsx
 - **确认以下点即可（多为已有逻辑）：**
   1. **最外层**：`flex h-[calc(100vh-4rem)]`，保证整页占满视窗高度。
   2. **ConversationList**：固定宽度，不参与「随视窗变化」的宽度计算。
-  3. **contentAreaRef 容器**：`flex min-w-0 flex-1 flex-row`  
-     - `flex-1`：占满剩余宽度，随视窗变宽/变窄。  
+  3. **contentAreaRef 容器**：`flex min-w-0 flex-1 flex-row`
+     - `flex-1`：占满剩余宽度，随视窗变宽/变窄。
      - `min-w-0`：允许在视窗变窄时收缩，避免被子项撑开。
-  4. **Quiz 面板外层 div**：  
-     - `flex: 0 0 ${quizPanelPercent}%`：宽度由比例决定，且随 content 区域宽度变化。  
-     - `minWidth: 200`、`maxWidth: '80%'`：限制极窄/极宽，避免布局崩溃。  
-     - `min-h-0 shrink-0`：高度填满、宽度不额外收缩（由 flex-basis 控制）。  
+  4. **Quiz 面板外层 div**：
+     - `flex: 0 0 ${quizPanelPercent}%`：宽度由比例决定，且随 content 区域宽度变化。
+     - `minWidth: 200`、`maxWidth: '80%'`：限制极窄/极宽，避免布局崩溃。
+     - `min-h-0 shrink-0`：高度填满、宽度不额外收缩（由 flex-basis 控制）。
      - `overflow-auto`：内容过长时在内部滚动。
   5. **main (Chat)**：`flex min-h-0 min-w-0 flex-1`，占剩余宽度并可在视窗变窄时收缩。
 
@@ -90,10 +90,10 @@ src/components/QuizPanel.tsx
 
 ## 文件变更清单
 
-| 文件 | 操作 |
-|------|------|
+| 文件                           | 操作                                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
 | `src/components/QuizPanel.tsx` | 去掉根节点固定宽度（如 `md:w-80`）；改为填满父容器并允许收缩（如 `w-full min-w-0 flex-1`），保证随父级与视窗变化。 |
-| `src/routes/index.tsx` | 通常无需改；仅确认 content 区域与 Quiz/Chat 的 flex 和 min-w-0 如上所述。 |
+| `src/routes/index.tsx`         | 通常无需改；仅确认 content 区域与 Quiz/Chat 的 flex 和 min-w-0 如上所述。                                          |
 
 ---
 
