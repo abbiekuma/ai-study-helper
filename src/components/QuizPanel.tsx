@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useServerFn } from '@tanstack/react-start'
 import { submitQuizAnswer } from '../lib/chat.server'
+import { X } from 'lucide-react'
 
 type QuizQuestion = {
   id: number
@@ -32,6 +33,8 @@ type Props = {
   onRefresh?: () => void
   isSaved?: boolean
   onToggleSaved?: () => void
+  /** When provided, show a close button to hide the quiz panel (e.g. on Chat page). */
+  onClose?: () => void
 }
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'] as const
@@ -53,6 +56,7 @@ export function QuizPanel({
   onRefresh,
   isSaved = false,
   onToggleSaved,
+  onClose,
 }: Props) {
   const submitAnswerFn = useServerFn(submitQuizAnswer)
   const [submittingId, setSubmittingId] = useState<number | null>(null)
@@ -95,15 +99,26 @@ export function QuizPanel({
           </select>
         )}
         {onToggleSaved != null && (
-          <button
-            type="button"
-            onClick={onToggleSaved}
-            className="rounded px-2 py-1 text-xs font-medium text-cyan-600 hover:bg-cyan-50"
-            title={isSaved ? 'Unsave quiz' : 'Save quiz'}
-          >
-            {isSaved ? '★ Saved' : '☆ Save'}
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={onToggleSaved}
+              className="rounded px-2 py-1 text-xs font-medium text-cyan-600 hover:bg-cyan-50"
+              title={isSaved ? 'Unsave quiz' : 'Save quiz'}
+            >
+              {isSaved ? '★ Saved' : '☆ Save'}
+            </button>
+          )}
+          {onClose != null && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+              aria-label="Close quiz panel"
+              title="Close quiz panel"
+            >
+              <X size={18} />
+            </button>
+          )}
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {quizId == null ? (

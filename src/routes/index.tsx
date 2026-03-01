@@ -62,6 +62,10 @@ function HomePage() {
   const showQuizPanel =
     selectedConversationId != null && selectedQuizId != null
 
+  const handleCloseQuizPanel = useCallback(() => {
+    setSelectedQuizId(null)
+  }, [])
+
   const refetchQuiz = useCallback(() => {
     if (selectedQuizId == null) return
     getQuizQuestionsFn({ data: { quizId: selectedQuizId } }).then(setQuizQuestions)
@@ -143,6 +147,7 @@ function HomePage() {
                 onSelectQuiz={setSelectedQuizId}
                 questions={quizQuestions}
                 onRefresh={refetchQuiz}
+                onClose={handleCloseQuizPanel}
                 isSaved={
                   quizzes.find((q) => q.id === selectedQuizId)?.isSaved ?? false
                 }
