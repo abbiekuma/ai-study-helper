@@ -1,20 +1,23 @@
 # AI Study Helper
 
-An AI-powered study app that helps you learn a topic in two steps—**explain** and **go deeper**—then **quiz** you on what you just learned. You can keep asking questions in the chat while doing the quiz.
+An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, then **quiz** yourself. You can keep chatting while taking the quiz, save quizzes you like, and manage multiple conversations.
 
 ## How it works
 
 1. **Learn** — Start a conversation. Use **Beginner** for simple, analogy-based explanations, then **Deep-dive** for detail and follow-up.
 2. **Quiz** — Switch to **Quiz** and ask to be tested (e.g. “Quiz me” or “考我”). The AI generates multiple-choice questions from that conversation.
-3. **Answer** — Questions appear in a **quiz panel** between the conversation list and the chat. Pick an option; you see right/wrong and the correct answer.
+3. **Answer** — Questions appear in a **quiz panel** beside the chat. Pick an option; you see right/wrong and the correct answer.
 4. **Ask while quizzing** — The chat stays open. You can ask things like “What does question 1 mean?” without starting a new quiz.
+5. **Save & manage** — Save quizzes from the panel or from the quiz detail page. Delete chats from the sidebar (⋯ → Delete); saved quizzes are kept.
 
 ## Features
 
 - **Three modes**: Beginner (simple), Deep-dive (detailed), Quiz (generate and take MCQs).
-- **Conversations**: Multiple chats; each can mix modes.
-- **Quiz panel**: Shows only when the current conversation has quiz questions; you can do the quiz and chat at the same time.
-- **Score and feedback**: Per-question correct/incorrect and an overall score.
+- **Conversations**: Multiple chats; each can mix modes. Delete a chat from the list (⋯ → Delete); quizzes you saved stay in “Saved”.
+- **Quiz panel**: Shows when the current conversation has quizzes; resizable. Close it and reopen from the **Quiz bar** above the chat.
+- **Save quiz**: Mark a quiz as saved so it appears under **Quizzes → Saved** and survives when you delete its chat.
+- **Quiz pages**: **Quizzes → All** (grouped by conversation), **Quizzes → Saved**, and a detail page per quiz (`/quiz/$quizId`).
+- **Score and feedback**: Per-question correct/incorrect and overall score.
 
 ## Tech stack
 
@@ -53,6 +56,12 @@ An AI-powered study app that helps you learn a topic in two steps—**explain** 
    npm run db:migrate
    ```
 
+   If **deleting a chat** later fails with an error about `conversation_id`, ensure the column allows NULL on the DB you’re actually using:
+
+   ```bash
+   npx tsx scripts/check-quizzes-nullable.ts
+   ```
+
 4. Run the app:
 
    ```bash
@@ -69,24 +78,40 @@ npm run build
 
 ## Scripts
 
-| Command               | Description                            |
-| --------------------- | -------------------------------------- |
-| `npm run dev`         | Start dev server (port 3000)           |
-| `npm run build`       | Production build                       |
-| `npm run db:push`     | Sync schema to DB (no migration files) |
-| `npm run db:migrate`  | Run migrations                         |
-| `npm run db:generate` | Generate migrations                    |
-| `npm run lint`        | Lint                                   |
-| `npm run check`       | Format + lint                          |
+| Command                        | Description                                      |
+| ------------------------------ | ------------------------------------------------- |
+| `npm run dev`                  | Start dev server (port 3000)                     |
+| `npm run build`                | Production build                                 |
+| `npm run preview`              | Preview production build                          |
+| `npm run db:push`              | Sync schema to DB (no migration files)             |
+| `npm run db:migrate`           | Run migrations                                    |
+| `npm run db:generate`         | Generate migrations from schema                   |
+| `npm run db:studio`            | Open Drizzle Studio                              |
+| `npx tsx scripts/check-quizzes-nullable.ts` | Fix `quizzes.conversation_id` NULL if needed |
+| `npm run lint`                 | Lint                                              |
+| `npm run check`                | Format + lint                                     |
+| `npm run test`                 | Run tests                                         |
 
-## Project structure (main pieces)
+## Project structure
 
-- `src/routes/` — Pages and root layout.
-- `src/components/` — ChatUI, QuizPanel, ConversationList, Header.
-- `src/lib/chat.server.ts` — Server function definitions (get/send messages, quiz).
-- `src/lib/chat.impl.server.ts` — Chat and quiz implementation (DB, AI).
-- `src/lib/gemini.server.ts` — Gemini prompts and `generateReply` / `generateQuizMcqs`.
-- `src/db/` — Drizzle schema and migrations.
+| Path | Description |
+|------|-------------|
+| `src/routes/` | Pages: `/` (home with chat + quiz panel), `/quiz` layout, `/quiz/all`, `/quiz/saved`, `/quiz/$quizId`. |
+| `src/components/` | ChatUI, QuizPanel, ConversationList (with delete dropdown), Header. |
+| `src/lib/chat.server.ts` | Server function definitions (messages, quizzes, deleteConversation). |
+| `src/lib/chat.impl.server.ts` | Chat + delete implementation (DB, AI). |
+| `src/lib/quiz.service.ts` | Quiz CRUD, getQuizzes by conversation, getSaved, getQuizById, LEFT JOIN for nullable conversationId. |
+| `src/lib/gemini.server.ts` | Gemini prompts, `generateReply`, `generateQuizMcqs`. |
+| `src/db/` | Drizzle schema and `drizzle/` migrations. |
+| `scripts/check-quizzes-nullable.ts` | One-off: ensure `quizzes.conversation_id` allows NULL (see docs if delete chat fails). |
+| `docs/` | Feature and bug docs (e.g. DELETE_CHAT_AND_QUIZZES.md, BUG_DELETE_CHAT_CONVERSATION_ID_NOT_NULL.md). |
+
+## Documentation
+
+- `docs/DELETE_CHAT_AND_QUIZZES.md` — Delete chat feature and data flow.
+- `docs/BUG_DELETE_CHAT_CONVERSATION_ID_NOT_NULL.md` — If delete chat fails, cause and fix (run `scripts/check-quizzes-nullable.ts`).
+- `docs/CHAT_QUIZ_BAR_AND_REOPEN.md` — Quiz bar above chat to reopen panel.
+- `docs/QUIZ_PAGES_AND_ROUTES.md` — Quiz routes and pages.
 
 ## Adding UI components (Shadcn)
 
