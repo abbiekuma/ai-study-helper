@@ -87,3 +87,10 @@ export const sendMessage = createServerFn({ method: 'POST' })
     const m = await import('./chat.impl.server')
     return m.sendMessageImpl(data)
   })
+
+export const deleteConversation = createServerFn({ method: 'POST' })
+  .inputValidator((data: { conversationId: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await import('./chat.impl.server')
+    return m.deleteConversationImpl(data)
+  })

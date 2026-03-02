@@ -20,7 +20,7 @@ type QuizQuestion = {
 
 type Quiz = {
   id: number
-  conversationId: number
+  conversationId: number | null
   createdAt: Date
   isSaved: boolean
 }

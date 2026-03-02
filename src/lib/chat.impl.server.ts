@@ -1,7 +1,7 @@
 // Server-only implementation: db, gemini. Imported only inside server function handlers.
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { db } from '../db/index'
-import { conversations, messages } from '../db/schema'
+import { conversations, messages, quizzes } from '../db/schema'
 import type { ChatMode, HistoryMessage } from './gemini.server'
 import { generateReply } from './gemini.server'
 import {
@@ -140,4 +140,24 @@ export async function sendMessageImpl(data: {
       mode,
     },
   }
+}
+
+/**
+ * Delete a conversation. Saved quizzes (isSaved === true) are kept by setting
+ * conversationId to null; other quizzes and all messages are cascade-deleted.
+ */
+export async function deleteConversationImpl(data: {
+  conversationId: number
+}): Promise<void> {
+  const { conversationId } = data
+  await db
+    .update(quizzes)
+    .set({ conversationId: null })
+    .where(
+      and(
+        eq(quizzes.conversationId, conversationId),
+        eq(quizzes.isSaved, true),
+      ),
+    )
+  await db.delete(conversations).where(eq(conversations.id, conversationId))
 }

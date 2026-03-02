@@ -109,7 +109,9 @@ function QuizDetailPage() {
           <p className="text-sm text-gray-500">
             {quiz.conversationTitle
               ? quiz.conversationTitle
-              : `Chat ${quiz.conversationId}`}{' '}
+              : quiz.conversationId != null
+                ? `Chat ${quiz.conversationId}`
+                : 'Saved (chat deleted)'}{' '}
             · {new Date(quiz.createdAt).toLocaleString()}
           </p>
         </div>

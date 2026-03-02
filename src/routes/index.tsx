@@ -9,7 +9,12 @@ import { useServerFn } from '@tanstack/react-start'
 export const Route = createFileRoute('/')({ component: HomePage })
 
 type QuizQuestion = Awaited<ReturnType<typeof getQuizQuestions>>
-type Quiz = Awaited<ReturnType<typeof getQuizzes>>[number]
+type Quiz = {
+  id: number
+  conversationId: number | null
+  createdAt: Date
+  isSaved: boolean
+}
 
 const MIN_PANEL_PERCENT = 20
 const MAX_PANEL_PERCENT = 80
@@ -133,6 +138,9 @@ function HomePage() {
       <ConversationList
         selectedId={selectedConversationId}
         onSelect={setSelectedConversationId}
+        onDeleted={(id) => {
+          if (selectedConversationId === id) setSelectedConversationId(null)
+        }}
       />
       <div ref={contentAreaRef} className="flex min-w-0 flex-1 flex-row">
         {showQuizPanel ? (

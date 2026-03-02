@@ -1,5 +1,5 @@
 // Quiz-only service: context, CRUD, and quiz generation. Used by chat.impl.server (sendMessage "考我") and chat.server (quiz server fn handlers).
-import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, isNotNull, isNull, ne, or } from 'drizzle-orm'
 import { db } from '../db/index'
 import { conversations, messages, quizQuestions, quizzes } from '../db/schema'
 import { generateQuizMcqs } from './gemini.server'
@@ -164,6 +164,7 @@ export async function getAllQuizzesGroupedByConversationImpl(): Promise<
     })
     .from(quizzes)
     .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .where(isNotNull(quizzes.conversationId))
     .orderBy(
       desc(conversations.createdAt),
       desc(quizzes.createdAt),
@@ -201,7 +202,7 @@ export async function getAllQuizzesGroupedByConversationImpl(): Promise<
 
 export type SavedQuizItem = {
   id: number
-  conversationId: number
+  conversationId: number | null
   createdAt: Date
   isSaved: boolean
   conversationTitle: string | null
@@ -217,7 +218,7 @@ export async function getSavedQuizzesImpl(): Promise<SavedQuizItem[]> {
       conversationTitle: conversations.title,
     })
     .from(quizzes)
-    .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .leftJoin(conversations, eq(quizzes.conversationId, conversations.id))
     .where(eq(quizzes.isSaved, true))
     .orderBy(desc(quizzes.createdAt))
   return rows.map((r) => ({
@@ -233,7 +234,7 @@ export async function getQuizByIdImpl(data: {
   quizId: number
 }): Promise<{
   id: number
-  conversationId: number
+  conversationId: number | null
   createdAt: Date
   isSaved: boolean
   conversationTitle: string | null
@@ -247,7 +248,7 @@ export async function getQuizByIdImpl(data: {
       conversationTitle: conversations.title,
     })
     .from(quizzes)
-    .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
+    .leftJoin(conversations, eq(quizzes.conversationId, conversations.id))
     .where(eq(quizzes.id, data.quizId))
   if (!row) return null
   return {

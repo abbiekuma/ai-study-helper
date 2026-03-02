@@ -56,7 +56,9 @@ function SavedQuizzesPage() {
                 Quiz #{q.id}
                 {q.conversationTitle
                   ? ` · ${q.conversationTitle}`
-                  : ` · Chat ${q.conversationId}`}
+                  : q.conversationId != null
+                    ? ` · Chat ${q.conversationId}`
+                    : ' · Saved'}
               </span>
               <span className="text-xs text-gray-400">
                 {new Date(q.createdAt).toLocaleString()}

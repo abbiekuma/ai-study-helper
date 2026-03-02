@@ -40,11 +40,12 @@ export const messages = pgTable('messages', {
 })
 
 // One row per "quiz" (one "考我" generation). One conversation has many quizzes.
+// conversationId nullable: when a chat is deleted, saved quizzes are kept with conversationId = null.
 export const quizzes = pgTable('quizzes', {
   id: serial('id').primaryKey(),
-  conversationId: integer('conversation_id')
-    .notNull()
-    .references(() => conversations.id, { onDelete: 'cascade' }),
+  conversationId: integer('conversation_id').references(() => conversations.id, {
+    onDelete: 'cascade',
+  }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   isSaved: boolean('is_saved').notNull().default(false),
 })
