@@ -69,6 +69,8 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
         })
         .catch((err) => {
           console.error('Delete conversation failed:', err)
+          const msg = err?.message ?? String(err)
+          window.alert(`Delete failed: ${msg}`)
         })
     },
     [deleteConversationFn, fetchConversations, onDeleted],
