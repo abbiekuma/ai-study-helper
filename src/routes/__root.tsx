@@ -10,6 +10,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Header from '../components/Header'
 import { GeminiKeyProvider } from '../contexts/GeminiKeyContext'
+import { HomeChatProvider } from '../contexts/HomeChatContext'
 
 import appCss from '../styles.css?url'
 
@@ -52,8 +53,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <GeminiKeyProvider>
-          <Header />
-          {children}
+          <HomeChatProvider>
+            <Header />
+            {children}
+          </HomeChatProvider>
         </GeminiKeyProvider>
         <TanStackDevtools
           config={{

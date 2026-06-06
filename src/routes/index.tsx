@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConversationList } from '../components/ConversationList'
 import { ChatUI } from '../components/ChatUI'
 import { QuizPanel } from '../components/QuizPanel'
+import { useHomeChat } from '../contexts/HomeChatContext'
 import { getQuizQuestions, getQuizzes, updateQuizSaved } from '../lib/chat.server'
 import { useServerFn } from '@tanstack/react-start'
 
@@ -36,6 +37,16 @@ function HomePage() {
   const getQuizzesFn = useServerFn(getQuizzes)
   const getQuizQuestionsFn = useServerFn(getQuizQuestions)
   const updateQuizSavedFn = useServerFn(updateQuizSaved)
+  const { registerGoToNewChat } = useHomeChat()
+
+  const goToNewChat = useCallback(() => {
+    setSelectedConversationId(null)
+    setSelectedQuizId(null)
+  }, [])
+
+  useEffect(() => {
+    return registerGoToNewChat(goToNewChat)
+  }, [registerGoToNewChat, goToNewChat])
 
   // When conversation changes: fetch quizzes and pick first as selected
   useEffect(() => {

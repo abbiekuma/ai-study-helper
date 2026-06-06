@@ -1,12 +1,25 @@
 // src/components/Header.tsx
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { CheckCircle2, ClipboardList, Home, Menu, Settings, X } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Home, KeyRound, Menu, Settings, X } from 'lucide-react'
 import { useGeminiKey } from '../contexts/GeminiKeyContext'
+import { useHomeChat } from '../contexts/HomeChatContext'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const { hasKey, hasServerEnvKey, isConfigured, maskedKey } = useGeminiKey()
+  const { goToNewChat } = useHomeChat()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleGoHome = (e: React.MouseEvent) => {
+    if (location.pathname === '/') {
+      e.preventDefault()
+      goToNewChat()
+    } else {
+      navigate({ to: '/' })
+    }
+  }
 
   const headerKeyLabel = hasKey
     ? maskedKey
@@ -14,9 +27,11 @@ export default function Header() {
       ? '.env.local'
       : null
 
+  const isHome = location.pathname === '/'
+
   return (
     <>
-      <header className="flex items-center justify-between bg-nav p-4 text-[#f5f0eb] shadow-lg shadow-nav/20">
+      <header className="flex items-center justify-between gap-3 bg-nav p-4 text-[#f5f0eb] shadow-lg shadow-nav/20">
         <div className="flex min-w-0 items-center">
           <button
             onClick={() => setIsOpen(true)}
@@ -26,12 +41,26 @@ export default function Header() {
             <Menu size={24} />
           </button>
           <h1 className="ml-4 truncate text-xl font-semibold">
-            <Link to="/" className="hover:text-[#e8ddd6]">
+            <Link to="/" onClick={handleGoHome} className="hover:text-[#e8ddd6]">
               AI Study Helper
             </Link>
           </h1>
         </div>
-        {isConfigured && headerKeyLabel ? (
+        {!isConfigured && isHome ? (
+          <Link
+            to="/settings"
+            className="ml-4 flex min-w-0 shrink items-center gap-2 rounded-lg border border-accent/50 bg-accent/15 px-3 py-1.5 text-sm text-[#f5f0eb] transition-colors hover:bg-accent/25"
+          >
+            <KeyRound size={16} className="shrink-0 text-accent" aria-hidden />
+            <span className="truncate">
+              <span className="hidden sm:inline">Add your </span>
+              <span className="font-medium underline-offset-2 hover:underline">
+                Gemini API key
+              </span>
+              <span className="hidden md:inline"> in Settings</span>
+            </span>
+          </Link>
+        ) : isConfigured && headerKeyLabel ? (
           <Link
             to="/settings"
             className="ml-4 flex shrink-0 items-center gap-2 rounded-lg border border-[#c4aea6]/30 bg-black/15 px-3 py-1.5 text-sm text-[#f0e8e4] transition-colors hover:bg-black/25"
@@ -67,7 +96,13 @@ export default function Header() {
         <nav className="flex-1 overflow-y-auto p-4">
           <Link
             to="/"
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              setIsOpen(false)
+              if (location.pathname === '/') {
+                e.preventDefault()
+                goToNewChat()
+              }
+            }}
             className="mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-nav-hover"
             activeProps={{
               className:
