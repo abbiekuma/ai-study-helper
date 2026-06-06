@@ -1,32 +1,41 @@
 // src/lib/chat.server.ts — only createServerFn; handlers load impl via dynamic import so client never loads db/gemini.
 import { createServerFn } from '@tanstack/react-start'
 
+async function getSessionId() {
+  const m = await import('./anonymous-session.server')
+  return m.getOrCreateSessionId()
+}
+
 export const getConversations = createServerFn({ method: 'GET' }).handler(
   async () => {
+    const sessionId = await getSessionId()
     const m = await import('./chat.impl.server')
-    return m.getConversationsImpl()
+    return m.getConversationsImpl(sessionId)
   },
 )
 
 export const getMessages = createServerFn({ method: 'GET' })
   .inputValidator((data: { conversationId: number }) => data)
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const m = await import('./chat.impl.server')
-    return m.getMessagesImpl(data)
+    return m.getMessagesImpl(sessionId, data)
   })
 
 export const getQuizQuestions = createServerFn({ method: 'GET' })
   .inputValidator((data: { quizId: number }) => data)
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.getQuizQuestionsImpl(data)
+    return q.getQuizQuestionsImpl(sessionId, data)
   })
 
 export const getQuizzes = createServerFn({ method: 'GET' })
   .inputValidator((data: { conversationId: number }) => data)
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.getQuizzesImpl(data)
+    return q.getQuizzesImpl(sessionId, data)
   })
 
 export const submitQuizAnswer = createServerFn({ method: 'POST' })
@@ -35,8 +44,9 @@ export const submitQuizAnswer = createServerFn({ method: 'POST' })
       data as { questionId: number; userAnswer: string },
   )
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.submitQuizAnswerImpl(data)
+    return q.submitQuizAnswerImpl(sessionId, data)
   })
 
 export const updateQuizSaved = createServerFn({ method: 'POST' })
@@ -45,29 +55,33 @@ export const updateQuizSaved = createServerFn({ method: 'POST' })
       data as { quizId: number; isSaved: boolean },
   )
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.updateQuizSavedImpl(data)
+    return q.updateQuizSavedImpl(sessionId, data)
   })
 
 export const getAllQuizzesGroupedByConversation = createServerFn({
   method: 'GET',
 }).handler(async () => {
+  const sessionId = await getSessionId()
   const q = await import('./quiz.service')
-  return q.getAllQuizzesGroupedByConversationImpl()
+  return q.getAllQuizzesGroupedByConversationImpl(sessionId)
 })
 
 export const getSavedQuizzes = createServerFn({ method: 'GET' }).handler(
   async () => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.getSavedQuizzesImpl()
+    return q.getSavedQuizzesImpl(sessionId)
   },
 )
 
 export const getQuizById = createServerFn({ method: 'GET' })
   .inputValidator((data: { quizId: number }) => data)
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const q = await import('./quiz.service')
-    return q.getQuizByIdImpl(data)
+    return q.getQuizByIdImpl(sessionId, data)
   })
 
 export const sendMessage = createServerFn({ method: 'POST' })
@@ -76,21 +90,25 @@ export const sendMessage = createServerFn({ method: 'POST' })
       conversationId?: number
       userMessage: string
       mode: 'beginner' | 'deep-dive' | 'quiz'
+      apiKey?: string
     }) =>
       data as {
         conversationId?: number
         userMessage: string
         mode: 'beginner' | 'deep-dive' | 'quiz'
+        apiKey?: string
       },
   )
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const m = await import('./chat.impl.server')
-    return m.sendMessageImpl(data)
+    return m.sendMessageImpl(sessionId, data)
   })
 
 export const deleteConversation = createServerFn({ method: 'POST' })
   .inputValidator((data: { conversationId: number }) => data)
   .handler(async ({ data }) => {
+    const sessionId = await getSessionId()
     const m = await import('./chat.impl.server')
-    return m.deleteConversationImpl(data)
+    return m.deleteConversationImpl(sessionId, data)
   })

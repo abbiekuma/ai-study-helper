@@ -4,6 +4,7 @@ import { db } from '../db/index'
 import { conversations, messages, quizzes } from '../db/schema'
 import type { ChatMode, HistoryMessage } from './gemini.server'
 import { generateReply } from './gemini.server'
+import { resolveGeminiApiKey } from './gemini-api-key.server'
 import {
   createQuizFromContext,
   getConversationContextForQuiz,
@@ -12,7 +13,23 @@ import {
 
 const BEGINNER_MODEL_NAME = 'gemini-2.5-flash-lite'
 
-export async function getConversationsImpl() {
+async function assertConversationAccess(
+  conversationId: number,
+  sessionId: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.sessionId, sessionId),
+      ),
+    )
+  if (!row) throw new Error('Conversation not found')
+}
+
+export async function getConversationsImpl(sessionId: string) {
   const rows = await db
     .select({
       id: conversations.id,
@@ -21,11 +38,16 @@ export async function getConversationsImpl() {
       createdAt: conversations.createdAt,
     })
     .from(conversations)
+    .where(eq(conversations.sessionId, sessionId))
     .orderBy(desc(conversations.createdAt))
   return rows
 }
 
-export async function getMessagesImpl(data: { conversationId: number }) {
+export async function getMessagesImpl(
+  sessionId: string,
+  data: { conversationId: number },
+) {
+  await assertConversationAccess(data.conversationId, sessionId)
   const rows = await db
     .select({
       id: messages.id,
@@ -41,20 +63,26 @@ export async function getMessagesImpl(data: { conversationId: number }) {
   return rows
 }
 
-export async function sendMessageImpl(data: {
-  conversationId?: number
-  userMessage: string
-  mode: ChatMode
-}) {
+export async function sendMessageImpl(
+  sessionId: string,
+  data: {
+    conversationId?: number
+    userMessage: string
+    mode: ChatMode
+    apiKey?: string
+  },
+) {
   const { conversationId: existingId, userMessage, mode } = data
+  const apiKey = resolveGeminiApiKey(data.apiKey)
 
   let conversationId: number
   if (existingId != null) {
+    await assertConversationAccess(existingId, sessionId)
     conversationId = existingId
   } else {
     const [row] = await db
       .insert(conversations)
-      .values({ mode })
+      .values({ mode, sessionId })
       .returning({ id: conversations.id })
     if (!row) throw new Error('Failed to create conversation')
     conversationId = row.id
@@ -73,11 +101,16 @@ export async function sendMessageImpl(data: {
     const context = await getConversationContextForQuiz(conversationId)
     if (!context.trim()) {
       const history: HistoryMessage[] = []
-      replyText = await generateReply(userMessage, history, mode)
+      replyText = await generateReply(userMessage, history, mode, apiKey)
     } else if (isQuizGenerationRequest(userMessage)) {
       try {
         const { quizId, replyText: quizReplyText } =
-          await createQuizFromContext({ conversationId, context })
+          await createQuizFromContext({
+            conversationId,
+            context,
+            sessionId,
+            apiKey,
+          })
         await db.insert(messages).values({
           conversationId,
           role: 'assistant',
@@ -109,7 +142,7 @@ export async function sendMessageImpl(data: {
         role: r.role as 'user' | 'assistant',
         content: r.content,
       }))
-      replyText = await generateReply(userMessage, history, mode)
+      replyText = await generateReply(userMessage, history, mode, apiKey)
     }
   } else {
     const rows = await db
@@ -121,7 +154,7 @@ export async function sendMessageImpl(data: {
       role: r.role as 'user' | 'assistant',
       content: r.content,
     }))
-    replyText = await generateReply(userMessage, history, mode)
+    replyText = await generateReply(userMessage, history, mode, apiKey)
   }
 
   await db.insert(messages).values({
@@ -146,10 +179,12 @@ export async function sendMessageImpl(data: {
  * Delete a conversation. Saved quizzes (isSaved === true) are kept by setting
  * conversationId to null; other quizzes and all messages are cascade-deleted.
  */
-export async function deleteConversationImpl(data: {
-  conversationId: number
-}): Promise<void> {
+export async function deleteConversationImpl(
+  sessionId: string,
+  data: { conversationId: number },
+): Promise<void> {
   const { conversationId } = data
+  await assertConversationAccess(conversationId, sessionId)
   await db
     .update(quizzes)
     .set({ conversationId: null })
@@ -157,6 +192,7 @@ export async function deleteConversationImpl(data: {
       and(
         eq(quizzes.conversationId, conversationId),
         eq(quizzes.isSaved, true),
+        eq(quizzes.sessionId, sessionId),
       ),
     )
   await db.delete(conversations).where(eq(conversations.id, conversationId))

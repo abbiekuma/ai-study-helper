@@ -22,6 +22,7 @@ export const messageRoleEnum = pgEnum('message_role', ['user', 'assistant'])
 
 export const conversations = pgTable('conversations', {
   id: serial('id').primaryKey(),
+  sessionId: text('session_id').notNull(),
   mode: chatModeEnum('mode').notNull(),
   title: text('title'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -43,6 +44,7 @@ export const messages = pgTable('messages', {
 // conversationId nullable: when a chat is deleted, saved quizzes are kept with conversationId = null.
 export const quizzes = pgTable('quizzes', {
   id: serial('id').primaryKey(),
+  sessionId: text('session_id').notNull(),
   conversationId: integer('conversation_id').references(() => conversations.id, {
     onDelete: 'cascade',
   }),

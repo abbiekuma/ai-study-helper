@@ -25,6 +25,45 @@ An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, 
 - **Backend**: TanStack Server Functions, Drizzle ORM, PostgreSQL.
 - **AI**: Google Gemini API (one model, different prompts per mode).
 
+## Deploying to Vercel (portfolio demo)
+
+### Architecture
+
+- **App**: TanStack Start + Nitro on Vercel (Serverless Functions).
+- **Database**: [Neon](https://neon.tech) or Vercel Postgres — set `DATABASE_URL` (use the **pooler** connection string).
+- **Gemini**: **Bring your own key** — visitors paste a key in **Settings**; it stays in `sessionStorage` (cleared when the browser closes) and is sent with each chat request. The server does **not** store API keys.
+- **Privacy**: Anonymous **browser session cookie** scopes chats/quizzes to the current browser session; closing the browser starts fresh. Other visitors cannot see your conversations.
+
+### Vercel environment variables
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `DATABASE_URL` | Yes | Neon pooler URL for production |
+| `GEMINI_API_KEY` | No | Omit in production (BYOK). Optional in `.env.local` for local dev only. |
+
+### Deploy steps
+
+1. Create a Neon database and run migrations against it:
+
+   ```bash
+   DATABASE_URL="postgresql://..." npm run db:migrate
+   ```
+
+2. Connect the GitHub repo to Vercel; set `DATABASE_URL` in project settings.
+
+3. Build uses the Nitro `vercel` preset when `VERCEL` is set (see `vite.config.ts`).
+
+4. Optional: enable **Vercel Deployment Protection** to limit public access to the demo.
+
+### Local vs production
+
+| | Local | Production |
+|---|--------|------------|
+| Database | `.env.local` → local Postgres | Vercel → Neon |
+| Gemini key | Settings and/or `GEMINI_API_KEY` in `.env.local` | Settings only (BYOK) |
+
+After pulling these changes, run **`npm run db:migrate`** (or `db:push`) once so `session_id` columns exist.
+
 ## Getting started
 
 ### Prerequisites
@@ -96,8 +135,10 @@ npm run build
 
 | Path | Description |
 |------|-------------|
-| `src/routes/` | Pages: `/` (home with chat + quiz panel), `/quiz` layout, `/quiz/all`, `/quiz/saved`, `/quiz/$quizId`. |
+| `src/routes/` | Pages: `/`, `/settings`, `/quiz` layout, `/quiz/all`, `/quiz/saved`, `/quiz/$quizId`. |
 | `src/components/` | ChatUI, QuizPanel, ConversationList (with delete dropdown), Header. |
+| `src/contexts/GeminiKeyContext.tsx` | BYOK key state (sessionStorage). |
+| `src/lib/anonymous-session.server.ts` | Browser session cookie for chat isolation. |
 | `src/lib/chat.server.ts` | Server function definitions (messages, quizzes, deleteConversation). |
 | `src/lib/chat.impl.server.ts` | Chat + delete implementation (DB, AI). |
 | `src/lib/quiz.service.ts` | Quiz CRUD, getQuizzes by conversation, getSaved, getQuizById, LEFT JOIN for nullable conversationId. |

@@ -22,10 +22,8 @@ export async function generateReply(
   userMessage: string,
   history: HistoryMessage[],
   mode: ChatMode,
+  apiKey: string,
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
-
   const systemInstruction = getSystemInstruction(mode)
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
@@ -135,10 +133,10 @@ function parseAndValidateMcqArray(raw: string): McqItem[] {
  * Generate MCQs from a conversation context string. Calls Gemini with a strict JSON-only prompt,
  * then parses and validates the response. Throws on parse/validation failure.
  */
-export async function generateQuizMcqs(conversationContext: string): Promise<McqItem[]> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
-
+export async function generateQuizMcqs(
+  conversationContext: string,
+  apiKey: string,
+): Promise<McqItem[]> {
   if (!conversationContext.trim()) {
     throw new Error('Conversation context is empty; cannot generate quiz')
   }

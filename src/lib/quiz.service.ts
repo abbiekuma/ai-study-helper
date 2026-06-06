@@ -19,6 +19,48 @@ export function isQuizGenerationRequest(message: string): boolean {
   return quizKeywords.some((k) => t.includes(k.toLowerCase()))
 }
 
+async function assertConversationAccess(
+  conversationId: number,
+  sessionId: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.sessionId, sessionId),
+      ),
+    )
+  if (!row) throw new Error('Conversation not found')
+}
+
+async function assertQuizAccess(
+  quizId: number,
+  sessionId: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ id: quizzes.id })
+    .from(quizzes)
+    .where(and(eq(quizzes.id, quizId), eq(quizzes.sessionId, sessionId)))
+  if (!row) throw new Error('Quiz not found')
+}
+
+async function assertQuestionAccess(
+  questionId: number,
+  sessionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ quizId: quizQuestions.quizId, sessionId: quizzes.sessionId })
+    .from(quizQuestions)
+    .innerJoin(quizzes, eq(quizQuestions.quizId, quizzes.id))
+    .where(eq(quizQuestions.id, questionId))
+  if (!row || row.sessionId !== sessionId) {
+    throw new Error('Question not found')
+  }
+  return row.quizId
+}
+
 export async function getConversationContextForQuiz(
   conversationId: number,
 ): Promise<string> {
@@ -37,7 +79,11 @@ export async function getConversationContextForQuiz(
     .join('\n\n')
 }
 
-export async function getQuizzesImpl(data: { conversationId: number }) {
+export async function getQuizzesImpl(
+  sessionId: string,
+  data: { conversationId: number },
+) {
+  await assertConversationAccess(data.conversationId, sessionId)
   const rows = await db
     .select({
       id: quizzes.id,
@@ -46,12 +92,21 @@ export async function getQuizzesImpl(data: { conversationId: number }) {
       isSaved: quizzes.isSaved,
     })
     .from(quizzes)
-    .where(eq(quizzes.conversationId, data.conversationId))
+    .where(
+      and(
+        eq(quizzes.conversationId, data.conversationId),
+        eq(quizzes.sessionId, sessionId),
+      ),
+    )
     .orderBy(desc(quizzes.createdAt))
   return rows
 }
 
-export async function getQuizQuestionsImpl(data: { quizId: number }) {
+export async function getQuizQuestionsImpl(
+  sessionId: string,
+  data: { quizId: number },
+) {
+  await assertQuizAccess(data.quizId, sessionId)
   const rows = await db
     .select({
       id: quizQuestions.id,
@@ -71,11 +126,12 @@ export async function getQuizQuestionsImpl(data: { quizId: number }) {
   return rows
 }
 
-export async function submitQuizAnswerImpl(data: {
-  questionId: number
-  userAnswer: string
-}) {
+export async function submitQuizAnswerImpl(
+  sessionId: string,
+  data: { questionId: number; userAnswer: string },
+) {
   const { questionId, userAnswer } = data
+  await assertQuestionAccess(questionId, sessionId)
   const key = userAnswer.trim().toUpperCase() as 'A' | 'B' | 'C' | 'D'
   if (!['A', 'B', 'C', 'D'].includes(key)) {
     throw new Error('userAnswer must be one of A, B, C, D')
@@ -97,14 +153,17 @@ export async function submitQuizAnswerImpl(data: {
   return { correct, correctAnswer: row.correctAnswer }
 }
 
-export async function updateQuizSavedImpl(data: {
-  quizId: number
-  isSaved: boolean
-}) {
+export async function updateQuizSavedImpl(
+  sessionId: string,
+  data: { quizId: number; isSaved: boolean },
+) {
+  await assertQuizAccess(data.quizId, sessionId)
   await db
     .update(quizzes)
     .set({ isSaved: data.isSaved })
-    .where(eq(quizzes.id, data.quizId))
+    .where(
+      and(eq(quizzes.id, data.quizId), eq(quizzes.sessionId, sessionId)),
+    )
   return { success: true }
 }
 
@@ -115,13 +174,16 @@ export async function updateQuizSavedImpl(data: {
 export async function createQuizFromContext(data: {
   conversationId: number
   context: string
+  sessionId: string
+  apiKey: string
 }): Promise<{ quizId: number; replyText: string }> {
-  const { conversationId, context } = data
-  const mcqs = await generateQuizMcqs(context)
+  const { conversationId, context, sessionId, apiKey } = data
+  const mcqs = await generateQuizMcqs(context, apiKey)
   const [quizRow] = await db
     .insert(quizzes)
     .values({
       conversationId,
+      sessionId,
       isSaved: false,
     })
     .returning({ id: quizzes.id })
@@ -149,9 +211,9 @@ export type QuizGroupItem = {
   quizzes: Array<{ id: number; createdAt: Date; isSaved: boolean }>
 }
 
-export async function getAllQuizzesGroupedByConversationImpl(): Promise<
-  QuizGroupItem[]
-> {
+export async function getAllQuizzesGroupedByConversationImpl(
+  sessionId: string,
+): Promise<QuizGroupItem[]> {
   const rows = await db
     .select({
       quizId: quizzes.id,
@@ -164,11 +226,14 @@ export async function getAllQuizzesGroupedByConversationImpl(): Promise<
     })
     .from(quizzes)
     .innerJoin(conversations, eq(quizzes.conversationId, conversations.id))
-    .where(isNotNull(quizzes.conversationId))
-    .orderBy(
-      desc(conversations.createdAt),
-      desc(quizzes.createdAt),
+    .where(
+      and(
+        isNotNull(quizzes.conversationId),
+        eq(conversations.sessionId, sessionId),
+        eq(quizzes.sessionId, sessionId),
+      ),
     )
+    .orderBy(desc(conversations.createdAt), desc(quizzes.createdAt))
   const byConv = new Map<
     number,
     {
@@ -208,7 +273,9 @@ export type SavedQuizItem = {
   conversationTitle: string | null
 }
 
-export async function getSavedQuizzesImpl(): Promise<SavedQuizItem[]> {
+export async function getSavedQuizzesImpl(
+  sessionId: string,
+): Promise<SavedQuizItem[]> {
   const rows = await db
     .select({
       id: quizzes.id,
@@ -219,7 +286,7 @@ export async function getSavedQuizzesImpl(): Promise<SavedQuizItem[]> {
     })
     .from(quizzes)
     .leftJoin(conversations, eq(quizzes.conversationId, conversations.id))
-    .where(eq(quizzes.isSaved, true))
+    .where(and(eq(quizzes.isSaved, true), eq(quizzes.sessionId, sessionId)))
     .orderBy(desc(quizzes.createdAt))
   return rows.map((r) => ({
     id: r.id,
@@ -230,9 +297,10 @@ export async function getSavedQuizzesImpl(): Promise<SavedQuizItem[]> {
   }))
 }
 
-export async function getQuizByIdImpl(data: {
-  quizId: number
-}): Promise<{
+export async function getQuizByIdImpl(
+  sessionId: string,
+  data: { quizId: number },
+): Promise<{
   id: number
   conversationId: number | null
   createdAt: Date
@@ -246,11 +314,12 @@ export async function getQuizByIdImpl(data: {
       createdAt: quizzes.createdAt,
       isSaved: quizzes.isSaved,
       conversationTitle: conversations.title,
+      sessionId: quizzes.sessionId,
     })
     .from(quizzes)
     .leftJoin(conversations, eq(quizzes.conversationId, conversations.id))
     .where(eq(quizzes.id, data.quizId))
-  if (!row) return null
+  if (!row || row.sessionId !== sessionId) return null
   return {
     id: row.id,
     conversationId: row.conversationId,

@@ -1,9 +1,12 @@
 // src/components/ChatUI.tsx
 
 import { useServerFn } from '@tanstack/react-start'
+import { Link } from '@tanstack/react-router'
 import { getMessages, sendMessage } from '../lib/chat.server'
 import type { ChatMode } from '../lib/gemini.server'
-import { useEffect, useState } from 'react'
+import { useGeminiKey } from '../contexts/GeminiKeyContext'
+import { Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -14,6 +17,17 @@ type Message = {
   mode?: string | null
   modelUsed?: string | null
   createdAt: Date
+  isLoading?: boolean
+}
+
+function AssistantLoadingBubble() {
+  return (
+    <div className="flex items-center gap-1 py-1" aria-label="Assistant is typing">
+      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
+    </div>
+  )
 }
 
 const MODE_LABELS: Record<string, string> = {
@@ -66,14 +80,22 @@ export function ChatUI({
 }: Props) {
   const sendMessageFn = useServerFn(sendMessage)
   const getMessagesFn = useServerFn(getMessages)
+  const { hasKey, getKeyForRequest } = useGeminiKey()
+  const canSend = hasKey || import.meta.env.DEV
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectedMode, setSelectedMode] = useState<ChatMode>('beginner')
+  const conversationIdRef = useRef(conversationId)
+  conversationIdRef.current = conversationId
+  const prevConversationIdRef = useRef<number | null>(conversationId)
 
   useEffect(() => {
+    const prev = prevConversationIdRef.current
+    prevConversationIdRef.current = conversationId
+
     if (conversationId == null) {
-      setMessages([])
+      if (prev != null) setMessages([])
       return
     }
     getMessagesFn({ data: { conversationId } })
@@ -83,49 +105,86 @@ export function ChatUI({
 
   const handleSend = async () => {
     const text = input.trim()
-    if (!text || loading) return
+    if (!text || loading || !canSend) return
+
+    const sendForConversationId = conversationId
+    const pendingUserId = -Date.now()
+    const pendingAssistantId = pendingUserId - 1
+
     setInput('')
     setLoading(true)
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: pendingUserId,
+        role: 'user',
+        content: text,
+        mode: selectedMode,
+        createdAt: new Date(),
+      },
+      {
+        id: pendingAssistantId,
+        role: 'assistant',
+        content: '',
+        mode: selectedMode,
+        createdAt: new Date(),
+        isLoading: true,
+      },
+    ])
+
     try {
       const result = await sendMessageFn({
         data: {
           conversationId: conversationId ?? undefined,
           userMessage: text,
           mode: selectedMode,
+          apiKey: getKeyForRequest(),
         },
       })
+
+      const stillSameConversation =
+        sendForConversationId === conversationIdRef.current ||
+        (sendForConversationId == null &&
+          result.conversationId === conversationIdRef.current)
+
+      if (!stillSameConversation) return
+
       if (
         result.conversationId != null &&
         onConversationCreated &&
-        conversationId == null
+        sendForConversationId == null
       ) {
         onConversationCreated(result.conversationId)
       }
       if (selectedMode === 'quiz') {
         onQuizGenerated?.(
-          result.conversationId ?? conversationId ?? undefined,
+          result.conversationId ?? sendForConversationId ?? undefined,
           result.quizId,
         )
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: -1,
-          role: 'user',
-          content: text,
-          mode: selectedMode,
-          createdAt: new Date(),
-        },
-        {
-          id: -2,
-          role: 'assistant',
-          content: result.assistantMessage.content,
-          mode: result.assistantMessage.mode,
-          createdAt: new Date(),
-        },
-      ])
+
+      if (sendForConversationId != null) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingAssistantId
+              ? {
+                  id: pendingAssistantId,
+                  role: 'assistant',
+                  content: result.assistantMessage.content,
+                  mode: result.assistantMessage.mode,
+                  createdAt: new Date(),
+                }
+              : m,
+          ),
+        )
+      }
     } catch (e) {
       console.error(e)
+      setMessages((prev) => prev.filter((m) => m.id !== pendingAssistantId))
+      setInput(text)
+      window.alert(
+        e instanceof Error ? e.message : 'Failed to send message. Please try again.',
+      )
     } finally {
       setLoading(false)
     }
@@ -133,6 +192,28 @@ export function ChatUI({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {!hasKey ? (
+        <div className="flex-shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {import.meta.env.DEV ? (
+            <>
+              Add your Gemini API key in{' '}
+              <Link to="/settings" className="font-medium underline hover:text-amber-950">
+                Settings
+              </Link>
+              , or rely on <code className="rounded bg-amber-100 px-1">GEMINI_API_KEY</code> in{' '}
+              <code className="rounded bg-amber-100 px-1">.env.local</code> for local dev.
+            </>
+          ) : (
+            <>
+              Add your Gemini API key in{' '}
+              <Link to="/settings" className="font-medium underline hover:text-amber-950">
+                Settings
+              </Link>{' '}
+              to start chatting. Keys stay in this browser session only.
+            </>
+          )}
+        </div>
+      ) : null}
       {conversationId != null && quizzes.length > 0 && onOpenQuiz != null && (
         <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
           <span className="mr-2 text-xs font-medium text-gray-500">
@@ -177,9 +258,13 @@ export function ChatUI({
               ) : null}
             </span>
             <div className="mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {m.content}
-              </ReactMarkdown>
+              {m.isLoading ? (
+                <AssistantLoadingBubble />
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {m.content}
+                </ReactMarkdown>
+              )}
             </div>
           </div>
         ))}
@@ -206,17 +291,25 @@ export function ChatUI({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
             placeholder="Type a message..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            disabled={loading || !canSend}
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={handleSend}
-            disabled={loading}
-            className="rounded-lg bg-cyan-600 px-4 py-2 text-white hover:bg-cyan-700 disabled:opacity-50"
+            disabled={loading || !canSend}
+            className="inline-flex min-w-[4.5rem] items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-white hover:bg-cyan-700 disabled:opacity-50"
           >
-            Send
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <span>Sending</span>
+              </>
+            ) : (
+              'Send'
+            )}
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QuizIndexRouteImport } from './routes/quiz/index'
@@ -16,6 +17,11 @@ import { Route as QuizSavedRouteImport } from './routes/quiz/saved'
 import { Route as QuizAllRouteImport } from './routes/quiz/all'
 import { Route as QuizQuizIdRouteImport } from './routes/quiz/$quizId'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuizRoute = QuizRouteImport.update({
   id: '/quiz',
   path: '/quiz',
@@ -50,6 +56,7 @@ const QuizQuizIdRoute = QuizQuizIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/quiz': typeof QuizRouteWithChildren
+  '/settings': typeof SettingsRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
   '/quiz/all': typeof QuizAllRoute
   '/quiz/saved': typeof QuizSavedRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
   '/quiz/all': typeof QuizAllRoute
   '/quiz/saved': typeof QuizSavedRoute
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/quiz': typeof QuizRouteWithChildren
+  '/settings': typeof SettingsRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
   '/quiz/all': typeof QuizAllRoute
   '/quiz/saved': typeof QuizSavedRoute
@@ -76,16 +85,24 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/quiz'
+    | '/settings'
     | '/quiz/$quizId'
     | '/quiz/all'
     | '/quiz/saved'
     | '/quiz/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/quiz/$quizId' | '/quiz/all' | '/quiz/saved' | '/quiz'
+  to:
+    | '/'
+    | '/settings'
+    | '/quiz/$quizId'
+    | '/quiz/all'
+    | '/quiz/saved'
+    | '/quiz'
   id:
     | '__root__'
     | '/'
     | '/quiz'
+    | '/settings'
     | '/quiz/$quizId'
     | '/quiz/all'
     | '/quiz/saved'
@@ -95,10 +112,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   QuizRoute: typeof QuizRouteWithChildren
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quiz': {
       id: '/quiz'
       path: '/quiz'
@@ -163,6 +188,7 @@ const QuizRouteWithChildren = QuizRoute._addFileChildren(QuizRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   QuizRoute: QuizRouteWithChildren,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
