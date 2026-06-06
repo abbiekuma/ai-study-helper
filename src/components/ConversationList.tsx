@@ -81,14 +81,14 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
     setOpenDropdownId((prev) => (prev === id ? null : id))
   }
 
-  if (loading) return <div className="p-4 text-gray-500">Loading...</div>
+  if (loading) return <div className="p-4 text-stone-500">Loading...</div>
 
   return (
-    <aside className="w-64 border-r border-gray-200 bg-gray-50 p-4">
+    <aside className="w-64 border-r border-border bg-background p-4">
       <button
         type="button"
         onClick={handleNewChat}
-        className="mb-4 w-full rounded-lg bg-cyan-600 px-4 py-2 text-white hover:bg-cyan-700"
+        className="mb-4 w-full rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary-hover"
       >
         New chat
       </button>
@@ -100,8 +100,8 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
               onClick={() => onSelect(c.id)}
               className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-sm ${
                 selectedId === c.id
-                  ? 'bg-cyan-100 text-cyan-800'
-                  : 'hover:bg-gray-200'
+                  ? 'bg-primary-muted text-primary-muted-foreground'
+                  : 'hover:bg-muted/80'
               }`}
             >
               {c.title ?? `Chat ${c.id}`}
@@ -110,7 +110,7 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
               ref={openDropdownId === c.id ? triggerRef : undefined}
               type="button"
               onClick={(e) => openDropdown(e, c.id)}
-              className="shrink-0 rounded p-1.5 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+              className="shrink-0 rounded p-1.5 text-stone-500 hover:bg-stone-200 hover:text-stone-700"
               aria-label="More options"
               aria-expanded={openDropdownId === c.id}
             >
@@ -119,11 +119,11 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
             {openDropdownId === c.id && (
               <div
                 ref={dropdownRef}
-                className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-lg border border-stone-200 bg-card py-1 shadow-lg"
               >
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  className="w-full px-3 py-2 text-left text-sm text-primary-muted-foreground hover:bg-primary-muted/50"
                   onClick={(e) => handleDeleteClick(e, c)}
                 >
                   Delete

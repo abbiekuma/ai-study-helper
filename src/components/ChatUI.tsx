@@ -24,9 +24,9 @@ type Message = {
 function AssistantLoadingBubble() {
   return (
     <div className="flex items-center gap-1 py-1" aria-label="Assistant is typing">
-      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
-      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
-      <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.3s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.15s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-stone-400" />
     </div>
   )
 }
@@ -235,19 +235,19 @@ export function ChatUI({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-chat">
       {!isConfigured ? (
-        <div className="flex-shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="flex-shrink-0 border-b border-primary-muted bg-primary-muted/50 px-4 py-3 text-sm text-primary-muted-foreground">
           Add your Gemini API key in{' '}
-          <Link to="/settings" className="font-medium underline hover:text-amber-950">
+          <Link to="/settings" className="font-medium underline hover:text-primary-muted-foreground">
             Settings
           </Link>{' '}
           to start chatting. Keys stay in this browser session only.
         </div>
       ) : null}
       {conversationId != null && quizzes.length > 0 && onOpenQuiz != null && (
-        <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
-          <span className="mr-2 text-xs font-medium text-gray-500">
+        <div className="flex-shrink-0 border-b border-border bg-chat px-3 py-2">
+          <span className="mr-2 text-xs font-medium text-stone-500">
             Quizzes:
           </span>
           <div className="flex flex-wrap gap-2">
@@ -258,8 +258,8 @@ export function ChatUI({
                 onClick={() => onOpenQuiz(q.id)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   selectedQuizId === q.id
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-muted'
                 }`}
               >
                 Quiz {i + 1}
@@ -271,14 +271,14 @@ export function ChatUI({
       )}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {messages.length === 0 && conversationId == null && (
-          <p className="text-gray-500">
+          <p className="text-stone-500">
             Choose Beginner / Deep-dive / Quiz, then send a message to start.
           </p>
         )}
         {messages.length === 0 &&
           conversationId != null &&
           selectedMode === 'quiz' && (
-            <p className="text-gray-500">
+            <p className="text-stone-500">
               After learning in Beginner or Deep-dive, switch to Quiz and send
               any message—the quiz panel will open with clickable questions.
             </p>
@@ -287,16 +287,22 @@ export function ChatUI({
           <div
             key={m.id}
             className={`mb-3 rounded-lg p-3 ${
-              m.role === 'user' ? 'ml-8 bg-cyan-100' : 'mr-8 bg-gray-100'
+              m.role === 'user'
+                ? 'ml-8 bg-primary-muted text-foreground'
+                : 'mr-8 border border-border/60 bg-card'
             }`}
           >
-            <span className="text-xs font-medium text-gray-500">
+            <span className="text-xs font-medium text-stone-500">
               {m.role === 'user' ? 'User' : 'Assistant'}
               {modeLabel(getDisplayMode(m)) ? (
                 <> · {modeLabel(getDisplayMode(m))}</>
               ) : null}
             </span>
-            <div className="mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+            <div
+              className={`mt-1 max-w-none prose prose-sm prose-code:text-foreground prose-pre:text-foreground prose-pre-code:text-foreground dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 ${
+                m.role === 'assistant' ? 'assistant-prose' : ''
+              }`}
+            >
               {m.isLoading ? (
                 <AssistantLoadingBubble />
               ) : (
@@ -308,7 +314,7 @@ export function ChatUI({
           </div>
         ))}
       </div>
-      <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
+      <div className="flex-shrink-0 border-t border-border bg-chat p-4">
         <div className="mb-2 flex flex-wrap gap-2">
           {MODES.map((m) => {
             if (m.value === 'quiz') {
@@ -320,8 +326,8 @@ export function ChatUI({
                   key={m.value}
                   className={`flex overflow-hidden rounded-lg text-sm font-medium ${
                     isQuizSelected
-                      ? 'bg-cyan-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-muted'
                   }`}
                 >
                   {showSubActions ? (
@@ -332,10 +338,10 @@ export function ChatUI({
                           setSelectedMode('quiz')
                           setQuizAction('generate')
                         }}
-                        className={`border-r border-cyan-500/40 px-3 py-1.5 transition-colors ${
+                        className={`border-r border-primary/30 px-3 py-1.5 transition-colors ${
                           effectiveQuizAction === 'generate'
-                            ? 'bg-cyan-800'
-                            : 'hover:bg-cyan-700'
+                            ? 'bg-primary-active'
+                            : 'hover:bg-primary-hover'
                         }`}
                       >
                         New Quiz
@@ -348,8 +354,8 @@ export function ChatUI({
                         }}
                         className={`px-3 py-1.5 transition-colors ${
                           effectiveQuizAction === 'follow-up'
-                            ? 'bg-cyan-800'
-                            : 'hover:bg-cyan-700'
+                            ? 'bg-primary-active'
+                            : 'hover:bg-primary-hover'
                         }`}
                       >
                         Follow-up
@@ -361,8 +367,8 @@ export function ChatUI({
                       onClick={() => setSelectedMode('quiz')}
                       className={`px-3 py-1.5 ${
                         isQuizSelected
-                          ? 'bg-cyan-600 text-white'
-                          : 'hover:bg-gray-300'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
                       }`}
                     >
                       Quiz
@@ -379,8 +385,8 @@ export function ChatUI({
                 onClick={() => setSelectedMode(m.value)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
                   selectedMode === m.value
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-muted'
                 }`}
               >
                 {m.label}
@@ -404,13 +410,13 @@ export function ChatUI({
                 : 'Type a message...'
             }
             disabled={loading || !canSend}
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-border bg-input px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={loading || !canSend}
-            className="inline-flex min-w-[4.5rem] items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-white hover:bg-cyan-700 disabled:opacity-50"
+            className="inline-flex min-w-[4.5rem] items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
           >
             {loading ? (
               <>

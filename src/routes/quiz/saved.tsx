@@ -22,16 +22,16 @@ function SavedQuizzesPage() {
   }, [fn])
 
   if (loading) {
-    return <div className="text-gray-500">Loading…</div>
+    return <div className="text-stone-500">Loading…</div>
   }
 
   if (quizzes.length === 0) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-semibold text-gray-800">
+        <h1 className="mb-2 text-xl font-semibold text-stone-800">
           Saved Quizzes
         </h1>
-        <p className="text-gray-500">
+        <p className="text-stone-500">
           No saved quizzes. Save a quiz from its detail page or from the Home
           chat panel.
         </p>
@@ -41,7 +41,7 @@ function SavedQuizzesPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold text-gray-800">
+      <h1 className="mb-4 text-xl font-semibold text-stone-800">
         Saved Quizzes
       </h1>
       <ul className="space-y-2">
@@ -50,9 +50,9 @@ function SavedQuizzesPage() {
             <Link
               to="/quiz/$quizId"
               params={{ quizId: String(q.id) }}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 shadow-sm hover:bg-gray-50"
+              className="flex items-center justify-between rounded border border-stone-200 bg-card px-4 py-3 shadow-sm hover:bg-sidebar-surface"
             >
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm font-medium text-stone-800">
                 Quiz #{q.id}
                 {q.conversationTitle
                   ? ` · ${q.conversationTitle}`
@@ -60,7 +60,7 @@ function SavedQuizzesPage() {
                     ? ` · Chat ${q.conversationId}`
                     : ' · Saved'}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-stone-400">
                 {new Date(q.createdAt).toLocaleString()}
               </span>
             </Link>

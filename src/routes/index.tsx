@@ -134,7 +134,7 @@ function HomePage() {
   }, [resizing])
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100vh-4rem)] bg-background">
       <ConversationList
         selectedId={selectedConversationId}
         onSelect={setSelectedConversationId}
@@ -146,7 +146,7 @@ function HomePage() {
         {showQuizPanel ? (
           <>
             <div
-              className="flex min-h-0 shrink-0 flex-col border-l border-gray-200 bg-gray-50 overflow-auto"
+              className="flex min-h-0 shrink-0 flex-col border-l border-border bg-quiz overflow-auto"
               style={{
                 flex: `0 0 ${quizPanelPercent}%`,
                 minWidth: 200,
@@ -187,7 +187,7 @@ function HomePage() {
               aria-valuemax={MAX_PANEL_PERCENT}
               tabIndex={0}
               onMouseDown={() => setResizing(true)}
-              className="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-cyan-400 transition-colors"
+              className="w-1 shrink-0 cursor-col-resize bg-splitter hover:bg-primary transition-colors"
               style={{ minWidth: 4 }}
             />
           </>

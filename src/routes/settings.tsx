@@ -29,8 +29,8 @@ function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg p-6">
-      <h1 className="mb-2 text-2xl font-semibold text-gray-900">Settings</h1>
-      <p className="mb-6 text-sm text-gray-600">
+      <h1 className="mb-2 text-2xl font-semibold text-stone-900">Settings</h1>
+      <p className="mb-6 text-sm text-stone-600">
         This portfolio demo uses <strong>bring-your-own-key</strong>. Your Gemini
         API key is stored in this browser tab&apos;s session only (cleared when
         you close the browser). It is sent over HTTPS when you chat but is{' '}
@@ -38,16 +38,16 @@ function SettingsPage() {
       </p>
 
       {hasServerEnvKey ? (
-        <div className="mb-6 flex gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+        <div className="mb-6 flex gap-3 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
           <CheckCircle2
             size={20}
-            className="mt-0.5 shrink-0 text-green-600"
+            className="mt-0.5 shrink-0 text-amber-800"
             aria-hidden
           />
           <div>
             <p className="font-medium">Gemini API connected via .env.local</p>
-            <p className="mt-1 text-green-800">
-              The server is using <code className="rounded bg-green-100 px-1">GEMINI_API_KEY</code>{' '}
+            <p className="mt-1 text-amber-900">
+              The server is using <code className="rounded bg-amber-100/80 px-1">GEMINI_API_KEY</code>{' '}
               from your environment file. You can chat without saving a key below.
               A key saved here overrides the env key for this browser session.
             </p>
@@ -55,24 +55,24 @@ function SettingsPage() {
         </div>
       ) : null}
 
-      <div className="mb-6 rounded-lg border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900">
+      <div className="mb-6 rounded-lg border border-primary-muted bg-primary-muted/50 p-4 text-sm text-primary-muted-foreground">
         <p className="font-medium">Chats are private to this browser session</p>
-        <p className="mt-1 text-cyan-800">
+        <p className="mt-1 text-primary-muted-foreground">
           Closing the browser starts fresh. Other visitors cannot see your
           conversations.
         </p>
       </div>
 
-      <label className="mb-1 block text-sm font-medium text-gray-700">
+      <label className="mb-1 block text-sm font-medium text-stone-700">
         Gemini API Key
       </label>
-      <p className="mb-2 text-xs text-gray-500">
+      <p className="mb-2 text-xs text-stone-500">
         Get a free key from{' '}
         <a
           href="https://aistudio.google.com/apikey"
           target="_blank"
           rel="noreferrer"
-          className="text-cyan-600 underline hover:text-cyan-700"
+          className="text-primary-muted-foreground underline hover:text-primary-muted-foreground"
         >
           Google AI Studio
         </a>
@@ -83,12 +83,12 @@ function SettingsPage() {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder={hasKey ? 'Paste a new key to replace' : 'Paste your API key'}
-        className="mb-3 w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+        className="mb-3 w-full rounded-lg border border-stone-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
       />
       {hasKey && maskedKey ? (
-        <p className="mb-3 text-sm text-gray-600">
+        <p className="mb-3 text-sm text-stone-600">
           Session key:{' '}
-          <code className="rounded bg-gray-100 px-1">{maskedKey}</code>
+          <code className="rounded bg-stone-100 px-1">{maskedKey}</code>
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -96,7 +96,7 @@ function SettingsPage() {
           type="button"
           onClick={handleSave}
           disabled={!input.trim()}
-          className="rounded-lg bg-cyan-600 px-4 py-2 text-white hover:bg-cyan-700 disabled:opacity-50"
+          className="rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
         >
           Save key
         </button>
@@ -104,20 +104,20 @@ function SettingsPage() {
           <button
             type="button"
             onClick={handleClear}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-stone-300 px-4 py-2 text-stone-700 hover:bg-sidebar-surface"
           >
             Remove key
           </button>
         ) : null}
         <Link
           to="/"
-          className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-stone-300 px-4 py-2 text-stone-700 hover:bg-sidebar-surface"
         >
           Back to chat
         </Link>
       </div>
       {saved ? (
-        <p className="mt-3 text-sm text-green-600">Key saved for this session.</p>
+        <p className="mt-3 text-sm text-primary-muted-foreground">Key saved for this session.</p>
       ) : null}
     </div>
   )

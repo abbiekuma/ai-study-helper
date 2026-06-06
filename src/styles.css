@@ -6,99 +6,127 @@
 @custom-variant dark (&:is(.dark *));
 
 body {
-  @apply m-0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
-    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  @apply m-0 font-serif text-base leading-relaxed;
+  font-family: var(--font-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.871 0.006 286.286);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --background: #fff9f2;
+  --foreground: #4a3632;
+  --chat-surface: #ffedd6;
+  --quiz-surface: #ffedd6;
+  --sidebar-surface: #fff9f2;
+  --card: #fff5eb;
+  --card-foreground: #4a3632;
+  --popover: #fff5eb;
+  --popover-foreground: #4a3632;
+  --primary: #deaca4;
+  --primary-hover: #d09990;
+  --primary-active: #c48a82;
+  --primary-foreground: #4a3632;
+  --primary-muted: #f5ddd8;
+  --primary-muted-foreground: #5c4540;
+  --code-bg: #ffe1ba;
+  --secondary: #f5ebe0;
+  --secondary-foreground: #4a3632;
+  --muted: #f0e8dc;
+  --muted-foreground: #7a655c;
+  --accent: #deaca4;
+  --accent-foreground: #4a3632;
+  --destructive: #b07a72;
+  --destructive-foreground: #fffdfb;
+  --border: #f0dbc0;
+  --input: #fff5eb;
+  --ring: #deaca4;
+  --chart-1: #deaca4;
+  --chart-2: #ffe1ba;
+  --chart-3: #ffedd6;
+  --chart-4: #b07a72;
+  --chart-5: #c48a82;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.871 0.006 286.286);
+  --sidebar: #fff9f2;
+  --sidebar-foreground: #4a3632;
+  --sidebar-primary: #deaca4;
+  --sidebar-primary-foreground: #4a3632;
+  --sidebar-accent: #f5ddd8;
+  --sidebar-accent-foreground: #5c4540;
+  --sidebar-border: #e8dfd4;
+  --sidebar-ring: #deaca4;
+  --splitter: #87685d;
+  --nav: #785143;
+  --nav-hover: #6a4638;
+  --nav-border: #6a4638;
+  --quiz-correct: #5b6140;
+  --quiz-correct-bg: #e8ebe0;
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.141 0.005 285.823);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.141 0.005 285.823);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.274 0.006 286.033);
-  --input: oklch(0.274 0.006 286.033);
-  --ring: oklch(0.442 0.017 285.786);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.274 0.006 286.033);
-  --sidebar-ring: oklch(0.442 0.017 285.786);
+  --background: #2a2624;
+  --foreground: #f5f2ee;
+  --chat-surface: #2a2624;
+  --sidebar-surface: #322e2c;
+  --card: #322e2c;
+  --card-foreground: #f5f2ee;
+  --popover: #322e2c;
+  --popover-foreground: #f5f2ee;
+  --primary: #c4aea6;
+  --primary-hover: #b29e96;
+  --primary-active: #a08f88;
+  --primary-foreground: #2a2624;
+  --primary-muted: #3d3835;
+  --primary-muted-foreground: #d4ccc7;
+  --secondary: #3d3835;
+  --secondary-foreground: #f5f2ee;
+  --muted: #3d3835;
+  --muted-foreground: #a8a099;
+  --accent: #3d3835;
+  --accent-foreground: #f5f2ee;
+  --destructive: #b07a72;
+  --destructive-foreground: #f5f2ee;
+  --border: #4a4440;
+  --input: #3d3835;
+  --ring: #c4aea6;
+  --sidebar: #322e2c;
+  --sidebar-foreground: #f5f2ee;
+  --sidebar-primary: #c4aea6;
+  --sidebar-primary-foreground: #2a2624;
+  --sidebar-accent: #3d3835;
+  --sidebar-accent-foreground: #d4ccc7;
+  --sidebar-border: #4a4440;
+  --sidebar-ring: #c4aea6;
 }
 
 @theme inline {
+  --font-serif:
+    'Noto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Courier New', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-chat: var(--chat-surface);
+  --color-quiz: var(--quiz-surface);
+  --color-sidebar-surface: var(--sidebar-surface);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-muted-foreground: var(--primary-muted-foreground);
+  --color-code-bg: var(--code-bg);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -127,6 +155,12 @@ code {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-splitter: var(--splitter);
+  --color-nav: var(--nav);
+  --color-nav-hover: var(--nav-hover);
+  --color-nav-border: var(--nav-border);
+  --color-quiz-correct: var(--quiz-correct);
+  --color-quiz-correct-bg: var(--quiz-correct-bg);
 }
 
 @layer base {
@@ -134,6 +168,37 @@ code {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-serif text-base leading-relaxed;
+  }
+
+  .assistant-prose {
+    font-family: var(--font-serif);
+  }
+
+  /* AI assistant markdown: code blocks use warm tan background */
+  .assistant-prose :where(pre) {
+    background-color: var(--code-bg) !important;
+    border: 1px solid color-mix(in srgb, var(--code-bg) 80%, #4a3632 20%);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: var(--foreground) !important;
+  }
+
+  .assistant-prose :where(pre code) {
+    background-color: transparent !important;
+    color: inherit !important;
+    font-family: var(--font-mono) !important;
+    padding: 0;
+    font-size: 0.8125rem;
+  }
+
+  .assistant-prose :where(:not(pre) > code) {
+    background-color: var(--code-bg) !important;
+    color: var(--foreground) !important;
+    font-family: var(--font-mono) !important;
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.8125em;
+    font-weight: 500;
   }
 }

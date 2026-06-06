@@ -24,16 +24,16 @@ function AllQuizzesPage() {
   }, [fn])
 
   if (loading) {
-    return <div className="text-gray-500">Loading…</div>
+    return <div className="text-stone-500">Loading…</div>
   }
 
   if (groups.length === 0) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-semibold text-gray-800">
+        <h1 className="mb-2 text-xl font-semibold text-stone-800">
           All Quizzes
         </h1>
-        <p className="text-gray-500">
+        <p className="text-stone-500">
           No quizzes yet. Learn a topic on Home, switch to Quiz mode, and send
           any message to generate one.
         </p>
@@ -43,17 +43,17 @@ function AllQuizzesPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold text-gray-800">
+      <h1 className="mb-4 text-xl font-semibold text-stone-800">
         All Quizzes
       </h1>
-      <p className="mb-6 text-sm text-gray-500">Grouped by chat.</p>
+      <p className="mb-6 text-sm text-stone-500">Grouped by chat.</p>
       <div className="space-y-6">
         {groups.map((group) => (
           <section
             key={group.conversationId}
-            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+            className="rounded-lg border border-stone-200 bg-card p-4 shadow-sm"
           >
-            <h2 className="mb-2 text-sm font-medium text-gray-500">
+            <h2 className="mb-2 text-sm font-medium text-stone-500">
               Chat {group.conversationId}
               {group.title ? ` · ${group.title}` : ''}
             </h2>
@@ -63,16 +63,16 @@ function AllQuizzesPage() {
                   <Link
                     to="/quiz/$quizId"
                     params={{ quizId: String(q.id) }}
-                    className="flex items-center justify-between rounded border border-gray-200 px-3 py-2 hover:bg-gray-50"
+                    className="flex items-center justify-between rounded border border-stone-200 px-3 py-2 hover:bg-sidebar-surface"
                   >
-                    <span className="text-sm text-gray-800">
+                    <span className="text-sm text-stone-800">
                       Quiz #{q.id}
-                      <span className="ml-2 text-gray-400">
+                      <span className="ml-2 text-stone-400">
                         {new Date(q.createdAt).toLocaleString()}
                       </span>
                     </span>
                     {q.isSaved && (
-                      <span className="text-xs text-amber-600">★ Saved</span>
+                      <span className="text-xs text-amber-800">★ Saved</span>
                     )}
                   </Link>
                 </li>
