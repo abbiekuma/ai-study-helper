@@ -2,30 +2,46 @@
 
 An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, then **quiz** yourself. You can keep chatting while taking the quiz, save quizzes you like, and manage multiple conversations.
 
+**Live demo:** [https://ai-study-helper-eta.vercel.app/](https://ai-study-helper-eta.vercel.app/)
+
+> Portfolio demo — chats and quizzes are scoped to your browser session. Add your own [Gemini API key](https://ai.google.dev/) in **Settings** to use the app (BYOK; keys stay in `sessionStorage` for the session).
+
+## Using the live site
+
+1. Open the [live demo](https://ai-study-helper-eta.vercel.app/) and add your Gemini API key in **Settings** (or use the reminder in the home page header).
+2. Click **New chat** in the left sidebar — or click **AI Study Helper** in the top bar to return to the home / new-chat screen.
+3. Choose **Beginner** or **Deep-dive**, send messages, and learn a topic.
+4. Switch to **Quiz** and send a message. If the chat has learning content, the app generates multiple-choice questions and opens the **quiz panel** (left of the chat; drag the divider to resize).
+5. Click options in the quiz panel to answer; saved quizzes show score and correct/incorrect feedback.
+6. With a quiz open, the **Quiz** mode button splits into **New Quiz** (another set) and **Follow-up** (ask about questions in chat). You can also reopen a closed panel from the **Quizzes** bar above the chat.
+7. **☆ Save** in the quiz panel (or on a quiz detail page) keeps a quiz under **Quizzes → Saved** even if you delete its chat. Delete a chat from the sidebar (⋯ → Delete).
+
 ## How it works
 
-1. **Learn** — Start a conversation. Use **Beginner** for simple, analogy-based explanations, then **Deep-dive** for detail and follow-up.
-2. **Quiz** — Switch to **Quiz** and send any message. The app generates multiple-choice questions from your learning chat and opens the **quiz panel**.
-3. **Answer** — Questions appear in a **quiz panel** beside the chat. Pick an option; you see right/wrong and the correct answer.
-4. **Ask while quizzing** — After a quiz appears, choose **Follow-up** to ask about questions in chat, or **New Quiz** to generate another set.
-5. **Save & manage** — Save quizzes from the panel or from the quiz detail page. Delete chats from the sidebar (⋯ → Delete); saved quizzes are kept.
+1. **Learn** — Start a conversation (**New chat**). Use **Beginner** for simple, analogy-based explanations, then **Deep-dive** for detail and follow-up.
+2. **Quiz** — Switch to **Quiz** and send a message. If the conversation already has Beginner / Deep-dive messages, the app builds MCQs from that context and opens the **quiz panel**. Without learning messages, Quiz mode only chats (it prompts you to learn first).
+3. **Answer** — Questions appear in the **quiz panel** to the left of chat. Pick an option; you see right/wrong and the correct answer. Multiple quizzes in one chat can be switched from the panel header dropdown.
+4. **Ask while quizzing** — With a quiz in the conversation, the **Quiz** button shows **New Quiz** and **Follow-up** sub-actions. **Follow-up** sends your message as a chat reply about the current quiz; **New Quiz** generates another set.
+5. **Save & manage** — Save quizzes from the panel or from the quiz detail page. Delete chats from the sidebar (⋯ → Delete); saved quizzes are kept under **Quizzes → Saved**.
 
 ## Features
 
 - **Three modes**: Beginner (simple), Deep-dive (detailed), Quiz (generate and take MCQs).
-- **Conversations**: Multiple chats; each can mix modes. Delete a chat from the list (⋯ → Delete); quizzes you saved stay in “Saved”.
-- **Quiz panel**: Shows when the current conversation has quizzes; resizable. Close it and reopen from the **Quiz bar** above the chat.
+- **Conversations**: Multiple chats; each can mix modes. **New chat** in the sidebar, or click the app title on Home to reset. Delete a chat from the list (⋯ → Delete); quizzes you saved stay in “Saved”.
+- **Quiz panel**: Opens when a quiz is selected for the current chat; resizable (left of chat). Close it with ✕ and reopen from the **Quizzes** bar above the chat. Header shows which chat the quiz came from.
 - **Save quiz**: Mark a quiz as saved so it appears under **Quizzes → Saved** and survives when you delete its chat.
 - **Quiz pages**: **Quizzes → All** (grouped by conversation), **Quizzes → Saved**, and a detail page per quiz (`/quiz/$quizId`).
-- **Score and feedback**: Per-question correct/incorrect and overall score.
+- **Score and feedback**: Per-question correct/incorrect and overall score in the panel.
 
 ## Tech stack
 
 - **Frontend**: React, TanStack Start (Router, Server Functions), Tailwind CSS.
 - **Backend**: TanStack Server Functions, Drizzle ORM, PostgreSQL.
-- **AI**: Google Gemini API (one model, different prompts per mode).
+- **AI**: Google Gemini API (`gemini-2.5-flash-lite`; different system prompts per mode).
 
 ## Deploying to Vercel (portfolio demo)
+
+**Production:** [https://ai-study-helper-eta.vercel.app/](https://ai-study-helper-eta.vercel.app/)
 
 ### Architecture
 
@@ -33,6 +49,7 @@ An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, 
 - **Database**: [Neon](https://neon.tech) or Vercel Postgres — set `DATABASE_URL` (use the **pooler** connection string).
 - **Gemini**: **Bring your own key** — visitors paste a key in **Settings**; it stays in `sessionStorage` (cleared when the browser closes) and is sent with each chat request. The server does **not** store API keys.
 - **Privacy**: Anonymous **browser session cookie** scopes chats/quizzes to the current browser session; closing the browser starts fresh. Other visitors cannot see your conversations.
+- **Onboarding**: The home page header prompts visitors to add a Gemini API key before chatting.
 
 ### Vercel environment variables
 
@@ -136,8 +153,9 @@ npm run build
 | Path | Description |
 |------|-------------|
 | `src/routes/` | Pages: `/`, `/settings`, `/quiz` layout, `/quiz/all`, `/quiz/saved`, `/quiz/$quizId`. |
-| `src/components/` | ChatUI, QuizPanel, ConversationList (with delete dropdown), Header. |
+| `src/components/` | ChatUI, QuizPanel, ConversationList, HomeIntro, Header. |
 | `src/contexts/GeminiKeyContext.tsx` | BYOK key state (sessionStorage). |
+| `src/contexts/HomeChatContext.tsx` | “New chat” reset when clicking the app title on Home. |
 | `src/lib/anonymous-session.server.ts` | Browser session cookie for chat isolation. |
 | `src/lib/chat.server.ts` | Server function definitions (messages, quizzes, deleteConversation). |
 | `src/lib/chat.impl.server.ts` | Chat + delete implementation (DB, AI). |
