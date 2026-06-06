@@ -34,8 +34,8 @@ function AllQuizzesPage() {
           All Quizzes
         </h1>
         <p className="text-gray-500">
-          No quizzes yet. Create a quiz from the Home chat by sending “考我” in
-          Quiz mode.
+          No quizzes yet. Learn a topic on Home, switch to Quiz mode, and send
+          any message to generate one.
         </p>
       </div>
     )

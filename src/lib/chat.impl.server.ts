@@ -5,10 +5,14 @@ import { conversations, messages, quizzes } from '../db/schema'
 import type { ChatMode, HistoryMessage } from './gemini.server'
 import { generateReply } from './gemini.server'
 import { resolveGeminiApiKey } from './gemini-api-key.server'
+import type { QuizAction } from './quiz.service'
 import {
+  buildQuizFollowUpUserMessage,
   createQuizFromContext,
+  formatQuizQuestionsForPrompt,
   getConversationContextForQuiz,
-  isQuizGenerationRequest,
+  getQuizQuestionsImpl,
+  shouldCreateStructuredQuiz,
 } from './quiz.service'
 
 const BEGINNER_MODEL_NAME = 'gemini-2.5-flash-lite'
@@ -70,9 +74,13 @@ export async function sendMessageImpl(
     userMessage: string
     mode: ChatMode
     apiKey?: string
+    quizAction?: QuizAction
+    activeQuizId?: number
   },
 ) {
   const { conversationId: existingId, userMessage, mode } = data
+  const quizAction = data.quizAction
+  const activeQuizId = data.activeQuizId
   const apiKey = resolveGeminiApiKey(data.apiKey)
 
   let conversationId: number
@@ -102,7 +110,7 @@ export async function sendMessageImpl(
     if (!context.trim()) {
       const history: HistoryMessage[] = []
       replyText = await generateReply(userMessage, history, mode, apiKey)
-    } else if (isQuizGenerationRequest(userMessage)) {
+    } else if (shouldCreateStructuredQuiz(quizAction)) {
       try {
         const { quizId, replyText: quizReplyText } =
           await createQuizFromContext({
@@ -142,7 +150,19 @@ export async function sendMessageImpl(
         role: r.role as 'user' | 'assistant',
         content: r.content,
       }))
-      replyText = await generateReply(userMessage, history, mode, apiKey)
+
+      let messageForAi = userMessage
+      if (activeQuizId != null) {
+        const questions = await getQuizQuestionsImpl(sessionId, {
+          quizId: activeQuizId,
+        })
+        if (questions.length > 0) {
+          const quizContext = formatQuizQuestionsForPrompt(questions)
+          messageForAi = buildQuizFollowUpUserMessage(quizContext, userMessage)
+        }
+      }
+
+      replyText = await generateReply(messageForAi, history, mode, apiKey)
     }
   } else {
     const rows = await db

@@ -4,19 +4,37 @@ import { db } from '../db/index'
 import { conversations, messages, quizQuestions, quizzes } from '../db/schema'
 import { generateQuizMcqs } from './gemini.server'
 
-export function isQuizGenerationRequest(message: string): boolean {
+export type QuizAction = 'generate' | 'follow-up'
+
+/** @deprecated Use explicit quizAction from the client instead. */
+export function isNewQuizRoundRequest(message: string): boolean {
   const t = message.trim().toLowerCase()
-  const quizKeywords = [
-    '考',
+  const keywords = [
+    '再来一套',
+    '再来一轮',
+    '重新出题',
+    '再考一次',
+    '再考我',
+    '再测',
+    '考我',
+    '考考',
     '出题',
     '测验',
     'quiz me',
     'test me',
     'generate quiz',
+    'new quiz',
+    'another quiz',
     '出几道题',
-    '考考',
   ]
-  return quizKeywords.some((k) => t.includes(k.toLowerCase()))
+  return keywords.some((k) => t.includes(k.toLowerCase()))
+}
+
+/** @deprecated Use isNewQuizRoundRequest or quizAction */
+export const isQuizGenerationRequest = isNewQuizRoundRequest
+
+export function shouldCreateStructuredQuiz(quizAction: QuizAction | undefined): boolean {
+  return quizAction === 'generate'
 }
 
 async function assertConversationAccess(
@@ -77,6 +95,49 @@ export async function getConversationContextForQuiz(
   return rows
     .map((r) => `${r.role === 'user' ? 'User' : 'Assistant'}: ${r.content}`)
     .join('\n\n')
+}
+
+type QuizQuestionRow = {
+  questionOrder: number
+  title: string
+  options: string
+  correctAnswer: string
+  userAnswer?: string | null
+  status?: string
+}
+
+/** Format panel quiz rows for Gemini when the user asks follow-ups in Quiz mode. */
+export function formatQuizQuestionsForPrompt(questions: QuizQuestionRow[]): string {
+  const lines = [
+    'The user is taking the following quiz in the side panel.',
+    'When they say "question N" / "第N题", they mean the numbered items below — do NOT invent different questions.',
+    '',
+  ]
+  for (const q of questions) {
+    let options: Record<string, string> = {}
+    try {
+      options = JSON.parse(q.options) as Record<string, string>
+    } catch {
+      /* ignore malformed options */
+    }
+    lines.push(`Question ${q.questionOrder}: ${q.title}`)
+    for (const key of ['A', 'B', 'C', 'D'] as const) {
+      if (options[key]) lines.push(`${key}. ${options[key]}`)
+    }
+    if (q.userAnswer) {
+      lines.push(`User's selected answer: ${q.userAnswer} (status: ${q.status ?? 'pending'})`)
+    }
+    lines.push(`Correct answer: ${q.correctAnswer}`)
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+export function buildQuizFollowUpUserMessage(
+  quizContext: string,
+  userMessage: string,
+): string {
+  return `${quizContext}\n---\nUser question: ${userMessage}`
 }
 
 export async function getQuizzesImpl(

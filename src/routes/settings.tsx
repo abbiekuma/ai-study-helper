@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import { useGeminiKey } from '../contexts/GeminiKeyContext'
 
 export const Route = createFileRoute('/settings')({
@@ -7,7 +8,8 @@ export const Route = createFileRoute('/settings')({
 })
 
 function SettingsPage() {
-  const { hasKey, maskedKey, saveKey, removeKey } = useGeminiKey()
+  const { hasKey, hasServerEnvKey, maskedKey, saveKey, removeKey } =
+    useGeminiKey()
   const [input, setInput] = useState('')
   const [saved, setSaved] = useState(false)
 
@@ -34,6 +36,24 @@ function SettingsPage() {
         you close the browser). It is sent over HTTPS when you chat but is{' '}
         <strong>not saved on our server</strong>.
       </p>
+
+      {hasServerEnvKey ? (
+        <div className="mb-6 flex gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <CheckCircle2
+            size={20}
+            className="mt-0.5 shrink-0 text-green-600"
+            aria-hidden
+          />
+          <div>
+            <p className="font-medium">Gemini API connected via .env.local</p>
+            <p className="mt-1 text-green-800">
+              The server is using <code className="rounded bg-green-100 px-1">GEMINI_API_KEY</code>{' '}
+              from your environment file. You can chat without saving a key below.
+              A key saved here overrides the env key for this browser session.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mb-6 rounded-lg border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900">
         <p className="font-medium">Chats are private to this browser session</p>
@@ -67,7 +87,8 @@ function SettingsPage() {
       />
       {hasKey && maskedKey ? (
         <p className="mb-3 text-sm text-gray-600">
-          Current key: <code className="rounded bg-gray-100 px-1">{maskedKey}</code>
+          Session key:{' '}
+          <code className="rounded bg-gray-100 px-1">{maskedKey}</code>
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">

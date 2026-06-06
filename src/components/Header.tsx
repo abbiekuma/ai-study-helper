@@ -1,26 +1,51 @@
 // src/components/Header/tsx
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Home, Menu, X, ClipboardList, Settings } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Home, Menu, Settings, X } from 'lucide-react'
+import { useGeminiKey } from '../contexts/GeminiKeyContext'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const { hasKey, hasServerEnvKey, isConfigured, maskedKey } = useGeminiKey()
+
+  const headerKeyLabel = hasKey
+    ? maskedKey
+    : hasServerEnvKey
+      ? '.env.local'
+      : null
 
   return (
     <>
-      <header className="p-4 flex items-center bg-gray-800 text-white shadow-lg">
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu size={24} />
-        </button>
-        <h1 className="ml-4 text-xl font-semibold">
-          <Link to="/" className="hover:opacity-90">
-            AI Study Helper
+      <header className="flex items-center justify-between bg-gray-800 p-4 text-white shadow-lg">
+        <div className="flex min-w-0 items-center">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="rounded-lg p-2 transition-colors hover:bg-gray-700"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
+          <h1 className="ml-4 truncate text-xl font-semibold">
+            <Link to="/" className="hover:opacity-90">
+              AI Study Helper
+            </Link>
+          </h1>
+        </div>
+        {isConfigured && headerKeyLabel ? (
+          <Link
+            to="/settings"
+            className="ml-4 flex shrink-0 items-center gap-2 rounded-lg border border-cyan-500/40 bg-cyan-950/40 px-3 py-1.5 text-sm text-cyan-100 transition-colors hover:bg-cyan-900/50"
+            title={
+              hasKey
+                ? 'Gemini API key saved for this browser session'
+                : 'Gemini API key from server environment (.env.local)'
+            }
+          >
+            <CheckCircle2 size={16} className="shrink-0 text-cyan-400" aria-hidden />
+            <span className="hidden sm:inline">Gemini API</span>
+            <span className="font-mono text-xs text-cyan-200/90">{headerKeyLabel}</span>
           </Link>
-        </h1>
+        ) : null}
       </header>
 
       <aside

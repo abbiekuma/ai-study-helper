@@ -5,9 +5,9 @@ An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, 
 ## How it works
 
 1. **Learn** — Start a conversation. Use **Beginner** for simple, analogy-based explanations, then **Deep-dive** for detail and follow-up.
-2. **Quiz** — Switch to **Quiz** and ask to be tested (e.g. “Quiz me” or “考我”). The AI generates multiple-choice questions from that conversation.
+2. **Quiz** — Switch to **Quiz** and send any message. The app generates multiple-choice questions from your learning chat and opens the **quiz panel**.
 3. **Answer** — Questions appear in a **quiz panel** beside the chat. Pick an option; you see right/wrong and the correct answer.
-4. **Ask while quizzing** — The chat stays open. You can ask things like “What does question 1 mean?” without starting a new quiz.
+4. **Ask while quizzing** — After a quiz appears, choose **Follow-up** to ask about questions in chat, or **New Quiz** to generate another set.
 5. **Save & manage** — Save quizzes from the panel or from the quiz detail page. Delete chats from the sidebar (⋯ → Delete); saved quizzes are kept.
 
 ## Features

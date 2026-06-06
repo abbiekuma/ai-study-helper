@@ -4,6 +4,7 @@ import { useServerFn } from '@tanstack/react-start'
 import { Link } from '@tanstack/react-router'
 import { getMessages, sendMessage } from '../lib/chat.server'
 import type { ChatMode } from '../lib/gemini.server'
+import type { QuizAction } from '../lib/quiz.service'
 import { useGeminiKey } from '../contexts/GeminiKeyContext'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -51,6 +52,22 @@ function getDisplayMode(m: Message): string | null {
   return null
 }
 
+function getLastMessageMode(msgs: Message[]): string | null {
+  if (msgs.length === 0) return null
+  return getDisplayMode(msgs[msgs.length - 1])
+}
+
+function resolveQuizAction(
+  messages: Message[],
+  hasQuiz: boolean,
+  selected: QuizAction | null,
+): QuizAction {
+  if (!hasQuiz || getLastMessageMode(messages) !== 'quiz') {
+    return 'generate'
+  }
+  return selected ?? 'follow-up'
+}
+
 type Props = {
   conversationId: number | null
   onConversationCreated?: (id: number) => void
@@ -80,15 +97,33 @@ export function ChatUI({
 }: Props) {
   const sendMessageFn = useServerFn(sendMessage)
   const getMessagesFn = useServerFn(getMessages)
-  const { hasKey, getKeyForRequest } = useGeminiKey()
-  const canSend = hasKey || import.meta.env.DEV
+  const { hasKey, hasServerEnvKey, isConfigured, getKeyForRequest } = useGeminiKey()
+  const canSend = isConfigured
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectedMode, setSelectedMode] = useState<ChatMode>('beginner')
+  const [quizAction, setQuizAction] = useState<QuizAction | null>(null)
   const conversationIdRef = useRef(conversationId)
   conversationIdRef.current = conversationId
   const prevConversationIdRef = useRef<number | null>(conversationId)
+  const hasQuiz = quizzes.length > 0
+
+  useEffect(() => {
+    if (selectedMode !== 'quiz') {
+      setQuizAction(null)
+      return
+    }
+    setQuizAction((prev) => resolveQuizAction(messages, hasQuiz, prev))
+  }, [selectedMode, hasQuiz, conversationId, messages])
+
+  const followUpQuizId =
+    selectedQuizId ?? (hasQuiz ? quizzes[quizzes.length - 1]?.id : undefined)
+
+  const effectiveQuizAction: QuizAction | undefined =
+    selectedMode === 'quiz'
+      ? resolveQuizAction(messages, hasQuiz, quizAction)
+      : undefined
 
   useEffect(() => {
     const prev = prevConversationIdRef.current
@@ -108,6 +143,12 @@ export function ChatUI({
     if (!text || loading || !canSend) return
 
     const sendForConversationId = conversationId
+    const sendQuizAction =
+      selectedMode === 'quiz'
+        ? resolveQuizAction(messages, hasQuiz, quizAction)
+        : undefined
+    const sendFollowUpQuizId =
+      sendQuizAction === 'follow-up' ? followUpQuizId : undefined
     const pendingUserId = -Date.now()
     const pendingAssistantId = pendingUserId - 1
 
@@ -139,6 +180,8 @@ export function ChatUI({
           userMessage: text,
           mode: selectedMode,
           apiKey: getKeyForRequest(),
+          quizAction: sendQuizAction,
+          activeQuizId: sendFollowUpQuizId,
         },
       })
 
@@ -156,11 +199,12 @@ export function ChatUI({
       ) {
         onConversationCreated(result.conversationId)
       }
-      if (selectedMode === 'quiz') {
+      if (selectedMode === 'quiz' && result.quizId != null) {
         onQuizGenerated?.(
           result.conversationId ?? sendForConversationId ?? undefined,
           result.quizId,
         )
+        setQuizAction('follow-up')
       }
 
       if (sendForConversationId != null) {
@@ -192,26 +236,13 @@ export function ChatUI({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {!hasKey ? (
+      {!isConfigured ? (
         <div className="flex-shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {import.meta.env.DEV ? (
-            <>
-              Add your Gemini API key in{' '}
-              <Link to="/settings" className="font-medium underline hover:text-amber-950">
-                Settings
-              </Link>
-              , or rely on <code className="rounded bg-amber-100 px-1">GEMINI_API_KEY</code> in{' '}
-              <code className="rounded bg-amber-100 px-1">.env.local</code> for local dev.
-            </>
-          ) : (
-            <>
-              Add your Gemini API key in{' '}
-              <Link to="/settings" className="font-medium underline hover:text-amber-950">
-                Settings
-              </Link>{' '}
-              to start chatting. Keys stay in this browser session only.
-            </>
-          )}
+          Add your Gemini API key in{' '}
+          <Link to="/settings" className="font-medium underline hover:text-amber-950">
+            Settings
+          </Link>{' '}
+          to start chatting. Keys stay in this browser session only.
         </div>
       ) : null}
       {conversationId != null && quizzes.length > 0 && onOpenQuiz != null && (
@@ -244,6 +275,14 @@ export function ChatUI({
             Choose Beginner / Deep-dive / Quiz, then send a message to start.
           </p>
         )}
+        {messages.length === 0 &&
+          conversationId != null &&
+          selectedMode === 'quiz' && (
+            <p className="text-gray-500">
+              After learning in Beginner or Deep-dive, switch to Quiz and send
+              any message—the quiz panel will open with clickable questions.
+            </p>
+          )}
         {messages.map((m) => (
           <div
             key={m.id}
@@ -270,21 +309,84 @@ export function ChatUI({
         ))}
       </div>
       <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
-        <div className="mb-2 flex gap-2">
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setSelectedMode(m.value)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                selectedMode === m.value
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+        <div className="mb-2 flex flex-wrap gap-2">
+          {MODES.map((m) => {
+            if (m.value === 'quiz') {
+              const isQuizSelected = selectedMode === 'quiz'
+              const showSubActions = isQuizSelected && hasQuiz
+
+              return (
+                <div
+                  key={m.value}
+                  className={`flex overflow-hidden rounded-lg text-sm font-medium ${
+                    isQuizSelected
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {showSubActions ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMode('quiz')
+                          setQuizAction('generate')
+                        }}
+                        className={`border-r border-cyan-500/40 px-3 py-1.5 transition-colors ${
+                          effectiveQuizAction === 'generate'
+                            ? 'bg-cyan-800'
+                            : 'hover:bg-cyan-700'
+                        }`}
+                      >
+                        New Quiz
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMode('quiz')
+                          setQuizAction('follow-up')
+                        }}
+                        className={`px-3 py-1.5 transition-colors ${
+                          effectiveQuizAction === 'follow-up'
+                            ? 'bg-cyan-800'
+                            : 'hover:bg-cyan-700'
+                        }`}
+                      >
+                        Follow-up
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMode('quiz')}
+                      className={`px-3 py-1.5 ${
+                        isQuizSelected
+                          ? 'bg-cyan-600 text-white'
+                          : 'hover:bg-gray-300'
+                      }`}
+                    >
+                      Quiz
+                    </button>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setSelectedMode(m.value)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  selectedMode === m.value
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {m.label}
+              </button>
+            )
+          })}
         </div>
         <div className="flex gap-2">
           <input
@@ -292,7 +394,15 @@ export function ChatUI({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
-            placeholder="Type a message..."
+            placeholder={
+              selectedMode === 'quiz'
+                ? effectiveQuizAction === 'generate'
+                  ? hasQuiz
+                    ? 'Send to generate a new quiz…'
+                    : 'Send any message to generate a quiz…'
+                  : 'Ask about a question or concept…'
+                : 'Type a message...'
+            }
             disabled={loading || !canSend}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
           />

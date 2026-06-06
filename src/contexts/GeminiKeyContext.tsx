@@ -2,10 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { useServerFn } from '@tanstack/react-start'
+import { getGeminiKeyStatus } from '../lib/chat.server'
 import {
   clearGeminiApiKey,
   getGeminiApiKey,
@@ -16,6 +19,8 @@ import {
 
 type GeminiKeyContextValue = {
   hasKey: boolean
+  hasServerEnvKey: boolean
+  isConfigured: boolean
   maskedKey: string | null
   saveKey: (key: string) => void
   removeKey: () => void
@@ -25,11 +30,19 @@ type GeminiKeyContextValue = {
 const GeminiKeyContext = createContext<GeminiKeyContextValue | null>(null)
 
 export function GeminiKeyProvider({ children }: { children: ReactNode }) {
+  const getGeminiKeyStatusFn = useServerFn(getGeminiKeyStatus)
   const [hasKey, setHasKey] = useState(() => hasGeminiApiKey())
+  const [hasServerEnvKey, setHasServerEnvKey] = useState(false)
   const [maskedKey, setMaskedKey] = useState<string | null>(() => {
     const key = getGeminiApiKey()
     return key ? maskGeminiApiKey(key) : null
   })
+
+  useEffect(() => {
+    getGeminiKeyStatusFn()
+      .then((status) => setHasServerEnvKey(status.hasServerEnvKey))
+      .catch(() => setHasServerEnvKey(false))
+  }, [getGeminiKeyStatusFn])
 
   const saveKey = useCallback((key: string) => {
     setGeminiApiKey(key)
@@ -48,9 +61,27 @@ export function GeminiKeyProvider({ children }: { children: ReactNode }) {
     return key?.trim() || undefined
   }, [])
 
+  const isConfigured = hasKey || hasServerEnvKey
+
   const value = useMemo(
-    () => ({ hasKey, maskedKey, saveKey, removeKey, getKeyForRequest }),
-    [hasKey, maskedKey, saveKey, removeKey, getKeyForRequest],
+    () => ({
+      hasKey,
+      hasServerEnvKey,
+      isConfigured,
+      maskedKey,
+      saveKey,
+      removeKey,
+      getKeyForRequest,
+    }),
+    [
+      hasKey,
+      hasServerEnvKey,
+      isConfigured,
+      maskedKey,
+      saveKey,
+      removeKey,
+      getKeyForRequest,
+    ],
   )
 
   return (

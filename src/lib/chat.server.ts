@@ -91,12 +91,16 @@ export const sendMessage = createServerFn({ method: 'POST' })
       userMessage: string
       mode: 'beginner' | 'deep-dive' | 'quiz'
       apiKey?: string
+      quizAction?: 'generate' | 'follow-up'
+      activeQuizId?: number
     }) =>
       data as {
         conversationId?: number
         userMessage: string
         mode: 'beginner' | 'deep-dive' | 'quiz'
         apiKey?: string
+        quizAction?: 'generate' | 'follow-up'
+        activeQuizId?: number
       },
   )
   .handler(async ({ data }) => {
@@ -112,3 +116,10 @@ export const deleteConversation = createServerFn({ method: 'POST' })
     const m = await import('./chat.impl.server')
     return m.deleteConversationImpl(sessionId, data)
   })
+
+/** Whether GEMINI_API_KEY is set in server env (e.g. .env.local). Does not expose the key. */
+export const getGeminiKeyStatus = createServerFn({ method: 'GET' }).handler(
+  async () => ({
+    hasServerEnvKey: Boolean(process.env.GEMINI_API_KEY?.trim()),
+  }),
+)
