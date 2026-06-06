@@ -18,9 +18,10 @@ type Props = {
   onSelect: (id: number | null) => void
   /** Called after a conversation was deleted; pass the deleted id so parent can clear selection if needed. */
   onDeleted?: (conversationId: number) => void
+  onConversationsChange?: (conversations: Conversation[]) => void
 }
 
-export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
+export function ConversationList({ selectedId, onSelect, onDeleted, onConversationsChange }: Props) {
   const fetchConversations = useServerFn(getConversations)
   const deleteConversationFn = useServerFn(deleteConversation)
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -34,6 +35,10 @@ export function ConversationList({ selectedId, onSelect, onDeleted }: Props) {
       .then(setConversations)
       .finally(() => setLoading(false))
   }, [fetchConversations])
+
+  useEffect(() => {
+    onConversationsChange?.(conversations)
+  }, [conversations, onConversationsChange])
 
   useEffect(() => {
     if (openDropdownId == null) return

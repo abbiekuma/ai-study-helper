@@ -20,89 +20,105 @@ samp {
 }
 
 :root {
+  /* Tier 0 — canvas */
   --background: #fff9f2;
   --foreground: #4a3632;
-  --chat-surface: #ffedd6;
-  --quiz-surface: #ffedd6;
   --sidebar-surface: #fff9f2;
-  --card: #fff5eb;
+  /* Tier 1 — content zones (chat / quiz) */
+  --chat-surface: #fff5f0;
+  --quiz-surface: #fff5f0;
+  /* Tier 2 — elevated surfaces */
+  --card: #fff0e8;
   --card-foreground: #4a3632;
-  --popover: #fff5eb;
+  --popover: #fff0e8;
   --popover-foreground: #4a3632;
-  --primary: #deaca4;
-  --primary-hover: #d09990;
-  --primary-active: #c48a82;
-  --primary-foreground: #4a3632;
-  --primary-muted: #f5ddd8;
-  --primary-muted-foreground: #5c4540;
-  --code-bg: #ffe1ba;
-  --secondary: #f5ebe0;
+  --input: #fff0e8;
+  /* Tier 3 — soft fills */
+  --secondary: #f2ebe3;
   --secondary-foreground: #4a3632;
-  --muted: #f0e8dc;
+  --primary-muted: #f2ebe3;
+  --primary-muted-foreground: #5c4540;
+  /* Tier 4 — muted fills */
+  --muted: #ede6dc;
   --muted-foreground: #7a655c;
+  /* Structure */
+  --border: #e8dcc8;
+  --code-bg: #ebe4da;
+  /* Action — nav brown */
+  --primary: #785143;
+  --primary-hover: #6a4638;
+  --primary-active: #5c3a2f;
+  --primary-foreground: #fffdfb;
+  /* Soft accent — dusty rose */
   --accent: #deaca4;
   --accent-foreground: #4a3632;
   --destructive: #b07a72;
   --destructive-foreground: #fffdfb;
-  --border: #f0dbc0;
-  --input: #fff5eb;
   --ring: #deaca4;
-  --chart-1: #deaca4;
-  --chart-2: #ffe1ba;
-  --chart-3: #ffedd6;
+  --chart-1: #785143;
+  --chart-2: #deaca4;
+  --chart-3: #fff5f0;
   --chart-4: #b07a72;
-  --chart-5: #c48a82;
+  --chart-5: #5b6140;
   --radius: 0.625rem;
   --sidebar: #fff9f2;
   --sidebar-foreground: #4a3632;
-  --sidebar-primary: #deaca4;
-  --sidebar-primary-foreground: #4a3632;
-  --sidebar-accent: #f5ddd8;
+  --sidebar-primary: #785143;
+  --sidebar-primary-foreground: #fffdfb;
+  --sidebar-accent: #f2ebe3;
   --sidebar-accent-foreground: #5c4540;
-  --sidebar-border: #e8dfd4;
+  --sidebar-border: #e8dcc8;
   --sidebar-ring: #deaca4;
   --splitter: #87685d;
   --nav: #785143;
   --nav-hover: #6a4638;
   --nav-border: #6a4638;
   --quiz-correct: #5b6140;
-  --quiz-correct-bg: #e8ebe0;
+  --quiz-correct-bg: #e6ebe0;
+  --quiz-wrong: #b35252;
+  --quiz-wrong-bg: #eacaca;
 }
 
 .dark {
   --background: #2a2624;
   --foreground: #f5f2ee;
-  --chat-surface: #2a2624;
-  --sidebar-surface: #322e2c;
-  --card: #322e2c;
+  --chat-surface: #302c2a;
+  --quiz-surface: #302c2a;
+  --sidebar-surface: #2a2624;
+  --card: #363230;
   --card-foreground: #f5f2ee;
-  --popover: #322e2c;
+  --popover: #363230;
   --popover-foreground: #f5f2ee;
-  --primary: #c4aea6;
-  --primary-hover: #b29e96;
-  --primary-active: #a08f88;
-  --primary-foreground: #2a2624;
+  --input: #363230;
+  --primary: #a6897c;
+  --primary-hover: #b8998c;
+  --primary-active: #957a6e;
+  --primary-foreground: #fffdfb;
   --primary-muted: #3d3835;
   --primary-muted-foreground: #d4ccc7;
+  --code-bg: #3d3835;
   --secondary: #3d3835;
   --secondary-foreground: #f5f2ee;
   --muted: #3d3835;
   --muted-foreground: #a8a099;
-  --accent: #3d3835;
-  --accent-foreground: #f5f2ee;
+  --accent: #c4aea6;
+  --accent-foreground: #2a2624;
   --destructive: #b07a72;
   --destructive-foreground: #f5f2ee;
   --border: #4a4440;
-  --input: #3d3835;
   --ring: #c4aea6;
-  --sidebar: #322e2c;
+  --sidebar: #2a2624;
   --sidebar-foreground: #f5f2ee;
-  --sidebar-primary: #c4aea6;
-  --sidebar-primary-foreground: #2a2624;
+  --sidebar-primary: #a6897c;
+  --sidebar-primary-foreground: #fffdfb;
   --sidebar-accent: #3d3835;
   --sidebar-accent-foreground: #d4ccc7;
   --sidebar-border: #4a4440;
   --sidebar-ring: #c4aea6;
+  --quiz-correct: #7a8058;
+  --quiz-correct-bg: #2f3328;
+  --quiz-wrong: #b35252;
+  --quiz-wrong-bg: #523535;
 }
 
 @theme inline {
@@ -161,6 +177,8 @@ samp {
   --color-nav-border: var(--nav-border);
   --color-quiz-correct: var(--quiz-correct);
   --color-quiz-correct-bg: var(--quiz-correct-bg);
+  --color-quiz-wrong: var(--quiz-wrong);
+  --color-quiz-wrong-bg: var(--quiz-wrong-bg);
 }
 
 @layer base {
@@ -178,7 +196,7 @@ samp {
   /* AI assistant markdown: code blocks use warm tan background */
   .assistant-prose :where(pre) {
     background-color: var(--code-bg) !important;
-    border: 1px solid color-mix(in srgb, var(--code-bg) 80%, #4a3632 20%);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0.75rem 1rem;
     color: var(--foreground) !important;

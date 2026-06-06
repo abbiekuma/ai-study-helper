@@ -163,7 +163,7 @@ function QuizDetailPage() {
                               ? 'cursor-default border-border bg-card'
                               : 'border-stone-300 hover:bg-stone-100'
                           } ${showCorrect ? 'border-quiz-correct bg-quiz-correct-bg' : ''} ${
-                            showWrong ? 'border-primary/50 bg-primary-muted/50' : ''
+                            showWrong ? 'border-quiz-wrong bg-quiz-wrong-bg' : ''
                           } ${isChosen && !answered ? 'ring-1 ring-ring' : ''}`}
                         >
                           <span className="font-medium">{key}.</span> {label}
@@ -173,7 +173,7 @@ function QuizDetailPage() {
                             </span>
                           )}
                           {showWrong && (
-                            <span className="ml-2 text-xs text-primary-muted-foreground">
+                            <span className="ml-2 text-xs text-quiz-wrong">
                               ✗ Wrong (correct: {q.correctAnswer})
                             </span>
                           )}

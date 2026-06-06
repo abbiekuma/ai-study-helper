@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { HomeIntro } from './HomeIntro'
 
 type Message = {
   id: number
@@ -270,11 +271,7 @@ export function ChatUI({
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {messages.length === 0 && conversationId == null && (
-          <p className="text-stone-500">
-            Choose Beginner / Deep-dive / Quiz, then send a message to start.
-          </p>
-        )}
+        {messages.length === 0 && conversationId == null && <HomeIntro />}
         {messages.length === 0 &&
           conversationId != null &&
           selectedMode === 'quiz' && (

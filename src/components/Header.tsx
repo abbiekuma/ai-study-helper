@@ -71,7 +71,7 @@ export default function Header() {
             className="mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-nav-hover"
             activeProps={{
               className:
-                'mb-2 flex items-center gap-3 rounded-lg bg-primary p-3 text-primary-foreground transition-colors hover:bg-primary-hover',
+                'mb-2 flex items-center gap-3 rounded-lg bg-accent p-3 text-accent-foreground transition-colors hover:bg-accent/90',
             }}
           >
             <Home size={20} />
@@ -83,7 +83,7 @@ export default function Header() {
             className="mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-nav-hover"
             activeProps={{
               className:
-                'mb-2 flex items-center gap-3 rounded-lg bg-primary p-3 text-primary-foreground transition-colors hover:bg-primary-hover',
+                'mb-2 flex items-center gap-3 rounded-lg bg-accent p-3 text-accent-foreground transition-colors hover:bg-accent/90',
             }}
           >
             <ClipboardList size={20} />
@@ -95,7 +95,7 @@ export default function Header() {
             className="mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-nav-hover"
             activeProps={{
               className:
-                'mb-2 flex items-center gap-3 rounded-lg bg-primary p-3 text-primary-foreground transition-colors hover:bg-primary-hover',
+                'mb-2 flex items-center gap-3 rounded-lg bg-accent p-3 text-accent-foreground transition-colors hover:bg-accent/90',
             }}
           >
             <Settings size={20} />

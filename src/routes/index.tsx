@@ -24,6 +24,9 @@ function HomePage() {
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
   >(null)
+  const [conversations, setConversations] = useState<
+    { id: number; title: string | null }[]
+  >([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion>([])
@@ -66,6 +69,12 @@ function HomePage() {
 
   const showQuizPanel =
     selectedConversationId != null && selectedQuizId != null
+
+  const selectedConversationTitle =
+    selectedConversationId != null
+      ? conversations.find((c) => c.id === selectedConversationId)?.title ??
+        `Chat ${selectedConversationId}`
+      : null
 
   const handleCloseQuizPanel = useCallback(() => {
     setSelectedQuizId(null)
@@ -138,6 +147,7 @@ function HomePage() {
       <ConversationList
         selectedId={selectedConversationId}
         onSelect={setSelectedConversationId}
+        onConversationsChange={setConversations}
         onDeleted={(id) => {
           if (selectedConversationId === id) setSelectedConversationId(null)
         }}
@@ -146,7 +156,7 @@ function HomePage() {
         {showQuizPanel ? (
           <>
             <div
-              className="flex min-h-0 shrink-0 flex-col border-l border-border bg-quiz overflow-auto"
+              className="flex min-h-0 shrink-0 flex-col border-l border-border bg-quiz"
               style={{
                 flex: `0 0 ${quizPanelPercent}%`,
                 minWidth: 200,
@@ -156,6 +166,7 @@ function HomePage() {
               <QuizPanel
                 quizId={selectedQuizId}
                 quizzes={quizzes}
+                conversationTitle={selectedConversationTitle}
                 onSelectQuiz={setSelectedQuizId}
                 questions={quizQuestions}
                 onRefresh={refetchQuiz}
