@@ -41,8 +41,20 @@ export default function Header() {
             <Menu size={24} />
           </button>
           <h1 className="ml-4 truncate text-xl font-semibold">
-            <Link to="/" onClick={handleGoHome} className="hover:text-[#e8ddd6]">
-              AI Study Helper
+            <Link
+              to="/"
+              onClick={handleGoHome}
+              className="flex items-center gap-2.5 hover:text-[#e8ddd6]"
+            >
+              <img
+                src="/book_5773587.png"
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0"
+                decoding="async"
+              />
+              <span className="truncate">AI Study Helper</span>
             </Link>
           </h1>
         </div>

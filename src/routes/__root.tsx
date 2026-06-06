@@ -33,6 +33,11 @@ export const Route = createRootRoute({
         rel: 'stylesheet',
         href: appCss,
       },
+      { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
+      { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon-64.png' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/logo192.png' },
+      { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo512.png' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       {
