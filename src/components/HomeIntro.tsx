@@ -26,7 +26,7 @@ export function HomeIntro() {
         Learn, then quiz yourself
       </h2>
       <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-        AI Study Helper is a study companion powered by Gemini. Learn a topic in
+        Quizly is a study companion powered by Gemini. Learn a topic in
         chat, generate quizzes from that conversation, and review what you
         remember—all in one place.
       </p>

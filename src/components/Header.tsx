@@ -1,7 +1,15 @@
 // src/components/Header.tsx
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { CheckCircle2, ClipboardList, Home, KeyRound, Menu, Settings, X } from 'lucide-react'
+import {
+  CheckCircle2,
+  ClipboardList,
+  Home,
+  KeyRound,
+  Menu,
+  Settings,
+  X,
+} from 'lucide-react'
 import { useGeminiKey } from '../contexts/GeminiKeyContext'
 import { useHomeChat } from '../contexts/HomeChatContext'
 
@@ -48,13 +56,13 @@ export default function Header() {
             >
               <img
                 src="/book_5773587.png"
-                alt=""
+                alt="Quizly"
                 width={32}
                 height={32}
                 className="h-8 w-8 shrink-0"
                 decoding="async"
               />
-              <span className="truncate">AI Study Helper</span>
+              <span className="truncate">Quizly</span>
             </Link>
           </h1>
         </div>
@@ -82,9 +90,15 @@ export default function Header() {
                 : 'Gemini API key from server environment (.env.local)'
             }
           >
-            <CheckCircle2 size={16} className="shrink-0 text-[#d4bdb4]" aria-hidden />
+            <CheckCircle2
+              size={16}
+              className="shrink-0 text-[#d4bdb4]"
+              aria-hidden
+            />
             <span className="hidden sm:inline">Gemini API</span>
-            <span className="font-mono text-xs text-[#e8ddd6]/90">{headerKeyLabel}</span>
+            <span className="font-mono text-xs text-[#e8ddd6]/90">
+              {headerKeyLabel}
+            </span>
           </Link>
         ) : null}
       </header>

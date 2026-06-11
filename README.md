@@ -1,4 +1,4 @@
-# AI Study Helper
+# Quizly
 
 An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, then **quiz** yourself. You can keep chatting while taking the quiz, save quizzes you like, and manage multiple conversations.
 
@@ -9,7 +9,7 @@ An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, 
 ## Using the live site
 
 1. Open the [live demo](https://ai-study-helper-eta.vercel.app/) and add your Gemini API key in **Settings** (or use the reminder in the home page header).
-2. Click **New chat** in the left sidebar — or click **AI Study Helper** in the top bar to return to the home / new-chat screen.
+2. Click **New chat** in the left sidebar — or click **Quizly** in the top bar to return to the home / new-chat screen.
 3. Choose **Beginner** or **Deep-dive**, send messages, and learn a topic.
 4. Switch to **Quiz** and send a message. If the chat has learning content, the app generates multiple-choice questions and opens the **quiz panel** (left of the chat; drag the divider to resize).
 5. Click options in the quiz panel to answer; saved quizzes show score and correct/incorrect feedback.
@@ -27,7 +27,7 @@ An AI-powered study app: learn a topic in **Beginner** and **Deep-dive** modes, 
 ## Features
 
 - **Three modes**: Beginner (simple), Deep-dive (detailed), Quiz (generate and take MCQs).
-- **Conversations**: Multiple chats; each can mix modes. **New chat** in the sidebar, or click the app title on Home to reset. Delete a chat from the list (⋯ → Delete); quizzes you saved stay in “Saved”.
+- **Conversations**: Multiple chats; each can mix modes. **New chat** in the sidebar, or click **Quizly** in the header to reset. Delete a chat from the list (⋯ → Delete); quizzes you saved stay in “Saved”.
 - **Quiz panel**: Opens when a quiz is selected for the current chat; resizable (left of chat). Close it with ✕ and reopen from the **Quizzes** bar above the chat. Header shows which chat the quiz came from.
 - **Save quiz**: Mark a quiz as saved so it appears under **Quizzes → Saved** and survives when you delete its chat.
 - **Quiz pages**: **Quizzes → All** (grouped by conversation), **Quizzes → Saved**, and a detail page per quiz (`/quiz/$quizId`).
@@ -155,7 +155,7 @@ npm run build
 | `src/routes/` | Pages: `/`, `/settings`, `/quiz` layout, `/quiz/all`, `/quiz/saved`, `/quiz/$quizId`. |
 | `src/components/` | ChatUI, QuizPanel, ConversationList, HomeIntro, Header. |
 | `src/contexts/GeminiKeyContext.tsx` | BYOK key state (sessionStorage). |
-| `src/contexts/HomeChatContext.tsx` | “New chat” reset when clicking the app title on Home. |
+| `src/contexts/HomeChatContext.tsx` | “New chat” reset when clicking **Quizly** in the header on Home. |
 | `src/lib/anonymous-session.server.ts` | Browser session cookie for chat isolation. |
 | `src/lib/chat.server.ts` | Server function definitions (messages, quizzes, deleteConversation). |
 | `src/lib/chat.impl.server.ts` | Chat + delete implementation (DB, AI). |

@@ -25,7 +25,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'AI Study Helper',
+        title: 'Quizly',
       },
     ],
     links: [
